@@ -4,7 +4,7 @@ simple .sh file that allows those less experienced with termux to configure a gu
 
 This script automates the installation of a Linux Desktop Environment (XFCE4, LXQt, or MATE) inside Termux using `proot-distro`, `termux-x11`, and `VirGL` for hardware acceleration.
 
-#NEEDED:
+NEEDED:
 termux and termux x11 on your phone, downloaded by fdroid
 
 ## How to install
