@@ -6,7 +6,7 @@
 #          Debian, Deepin, Fedora, Manjaro, OpenSUSE, Oracle,
 #          Pardus, Rocky, Termux, Trisquel, Ubuntu, Void
 #  DE/WM:  XFCE4, LXQt, MATE, Fluxbox, Openbox
-#  Display: Termux-X11 ONLY (no VNC)
+#  Display: Termux-X11 ONLY
 # ==============================================================
 
 R='\033[0;31m'
@@ -21,7 +21,7 @@ banner() {
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
     echo "║    TERMUX-X11 LINUX DESKTOP SETUP v2.0      ║"
-    echo "║   All Distros - All DEs - No VNC - TX11     ║"
+    echo "║   All Distros    - All DEs -     - TX11     ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -353,7 +353,7 @@ echo "║            ✓  SETUP COMPLETE!               ║"
 echo "╠══════════════════════════════════════════════╣"
 echo "║  Distro  : $DNAME"
 echo "║  Desktop : $DE_NAME"
-echo "║  Display : Termux-X11 (no VNC)"
+echo "║  Display : Termux-X11"
 echo "╠══════════════════════════════════════════════╣"
 echo "║  HOW TO START:                               ║"
 echo "║                                              ║"
