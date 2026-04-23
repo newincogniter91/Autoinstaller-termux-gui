@@ -12,4 +12,4 @@ termux and termux x11 on your phone, downloaded by fdroid(recommended) or github
 To copy the installer to your Termux home and start the setup, simply copy and paste the following command into your Termux terminal:
 
 ```bash
-pkg install wget -y && wget [https://raw.githubusercontent.com/newincogniter91/Autoinstaller-termux-gui/main/setup.sh](https://raw.githubusercontent.com/newincogniter91/Autoinstaller-termux-gui/main/setup.sh) && chmod +x setup.sh && ./setup.sh
+pkg install wget -y && wget https://raw.githubusercontent.com/newincogniter91/Autoinstaller-termux-gui/main/installer.sh && chmod +x installer.sh && ./installer.sh
