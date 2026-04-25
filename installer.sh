@@ -30,7 +30,7 @@ banner() {
 # 1. SYSTEM UPDATE & CORE PACKAGES
 # ==============================================================
 banner
-echo -e "${Y}--- [1/4] Updating system and installing core packages ---${NC}"
+echo -e "${Y}--- [1/5] Updating system and installing core packages ---${NC}"
 
 pkg update -y && pkg upgrade -y
 
@@ -107,7 +107,7 @@ case $distro_choice in
 esac
 
 echo -e "${G}✓ Selected: $DNAME${NC}"
-echo -e "${Y}--- [2/4] Installing $DNAME via proot-distro ---${NC}"
+echo -e "${Y}--- [2/5] Installing $DNAME via proot-distro ---${NC}"
 proot-distro install $DISTRO
 echo -e "${G}✓ $DNAME installed.${NC}"
 sleep 1
@@ -142,6 +142,7 @@ case $PKG_TYPE in
     apt)
         UPD="apt update -y && apt upgrade -y"
         EXTRA="dbus-x11 xauth fonts-noto"
+        APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji fonts-ubuntu qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies";                     START="startxfce4";    DE_NAME="XFCE4"    ;;
             2) DE_PKGS="lxqt";                                     START="startlxqt";     DE_NAME="LXQt"     ;;
@@ -151,12 +152,14 @@ case $PKG_TYPE in
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA"
+        APPEAR_CMD="apt install -y $APPEAR_PKGS"
         ;;
 
     # ---- PACMAN (Arch, Artix, Manjaro) ----
     pacman)
         UPD="pacman -Syu --noconfirm"
         EXTRA="dbus xorg-xauth noto-fonts"
+        APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies";     START="startxfce4";      DE_NAME="XFCE4"    ;;
             2) DE_PKGS="lxqt";                     START="startlxqt";       DE_NAME="LXQt"     ;;
@@ -166,12 +169,14 @@ case $PKG_TYPE in
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA"
+        APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS"
         ;;
 
     # ---- DNF (Fedora, AlmaLinux, Oracle, Rocky) ----
     dnf)
         UPD="dnf update -y"
         EXTRA="dbus-x11 xauth google-noto-fonts-common"
+        APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="@xfce-desktop";   START="startxfce4";    DE_NAME="XFCE4"    ;;
             2) DE_PKGS="@lxqt-desktop";   START="startlxqt";     DE_NAME="LXQt"     ;;
@@ -181,12 +186,14 @@ case $PKG_TYPE in
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA"
+        APPEAR_CMD="dnf install -y $APPEAR_PKGS"
         ;;
 
     # ---- APK (Alpine, Chimera, Adelie) ----
     apk)
         UPD="apk update && apk upgrade"
         EXTRA="dbus-x11 xauth font-noto"
+        APPEAR_PKGS="arc-theme papirus-icon-theme font-noto-emoji font-ubuntu qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-extras";   START="startxfce4";    DE_NAME="XFCE4"    ;;
             2) DE_PKGS="lxqt";                  START="startlxqt";     DE_NAME="LXQt"     ;;
@@ -196,12 +203,14 @@ case $PKG_TYPE in
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA"
+        APPEAR_CMD="apk add $APPEAR_PKGS"
         ;;
 
     # ---- XBPS (Void Linux) ----
     xbps)
         UPD="xbps-install -Suy"
         EXTRA="dbus-x11 xauth noto-fonts-ttf"
+        APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies";   START="startxfce4";    DE_NAME="XFCE4"    ;;
             2) DE_PKGS="lxqt";                   START="startlxqt";     DE_NAME="LXQt"     ;;
@@ -211,12 +220,14 @@ case $PKG_TYPE in
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA"
+        APPEAR_CMD="xbps-install -y $APPEAR_PKGS"
         ;;
 
     # ---- ZYPPER (OpenSUSE) ----
     zypper)
         UPD="zypper refresh && zypper update -y"
         EXTRA="dbus-1-x11 xauth noto-sans-fonts"
+        APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-coloremoji-fonts noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies";      START="startxfce4";    DE_NAME="XFCE4"    ;;
             2) DE_PKGS="lxqt";                      START="startlxqt";     DE_NAME="LXQt"     ;;
@@ -226,18 +237,54 @@ case $PKG_TYPE in
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && zypper install -y $DE_PKGS $EXTRA"
+        APPEAR_CMD="zypper install -y $APPEAR_PKGS"
         ;;
 esac
 
 echo -e "${G}✓ Selected: $DE_NAME${NC}"
-echo -e "${Y}--- [3/4] Installing $DE_NAME inside $DNAME ---${NC}"
+echo -e "${Y}--- [3/5] Installing $DE_NAME inside $DNAME ---${NC}"
 echo -e "${Y}(This may take several minutes...)${NC}"
 proot-distro login $DISTRO -- bash -c "$INSTALL_CMD"
 echo -e "${G}✓ $DE_NAME installed inside $DNAME.${NC}"
 sleep 1
 
 # ==============================================================
-# 4. GENERATE AUTOSTART CONFIG FOR FLUXBOX/OPENBOX
+# 4. APPEARANCE PACKAGES (OPTIONAL)
+# ==============================================================
+banner
+echo -e "${C}╔══════════════════════════════════════════════╗"
+echo    "║         RECOMMENDED APPEARANCE PACKAGES      ║"
+echo    "╠══════════════════════════════════════════════╣"
+echo    "║                                              ║"
+echo    "║  The following packages will be installed:  ║"
+echo    "║                                              ║"
+echo    "║  • Arc Theme       (Modern GTK theme)       ║"
+echo    "║  • Papirus Icons   (Beautiful icon pack)    ║"
+echo    "║  • Noto Emoji      (Full emoji support)     ║"
+echo    "║  • Ubuntu Fonts    (Clean, readable fonts)  ║"
+echo    "║  • Qt5ct           (Qt app theming tool)    ║"
+echo    "║  • LXAppearance    (GTK theme switcher)     ║"
+echo    "║                                              ║"
+echo -e "╚══════════════════════════════════════════════╝${NC}"
+echo ""
+read -p "$(echo -e ${Y})Do you want to install the recommended appearance packages? [Y/n]: $(echo -e ${NC})" appear_choice
+
+appear_choice="${appear_choice:-Y}"
+
+if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
+    echo -e "${Y}--- [4/5] Installing appearance packages inside $DNAME ---${NC}"
+    echo -e "${Y}(This may take a few minutes...)${NC}"
+    proot-distro login $DISTRO -- bash -c "$APPEAR_CMD"
+    APPEAR_INSTALLED=true
+    echo -e "${G}✓ Appearance packages installed.${NC}"
+else
+    echo -e "${Y}⚠ Skipping appearance packages.${NC}"
+    APPEAR_INSTALLED=false
+fi
+sleep 1
+
+# ==============================================================
+# 5. GENERATE AUTOSTART CONFIG FOR FLUXBOX/OPENBOX
 # ==============================================================
 
 # Extra config for Fluxbox autostart
@@ -264,9 +311,9 @@ OBAUTO'
 fi
 
 # ==============================================================
-# 5. CREATE start.sh LAUNCHER
+# 6. CREATE start.sh LAUNCHER
 # ==============================================================
-echo -e "${Y}--- [4/4] Creating ~/start.sh launcher ---${NC}"
+echo -e "${Y}--- [5/5] Creating ~/start.sh launcher ---${NC}"
 
 cat > ~/start.sh <<STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
@@ -354,6 +401,11 @@ echo "╠═══════════════════════�
 echo "║  Distro  : $DNAME"
 echo "║  Desktop : $DE_NAME"
 echo "║  Display : Termux-X11"
+if [ "$APPEAR_INSTALLED" = true ]; then
+echo "║  Appearance packages: Installed ✓"
+else
+echo "║  Appearance packages: Skipped"
+fi
 echo "╠══════════════════════════════════════════════╣"
 echo "║  HOW TO START:                               ║"
 echo "║                                              ║"
