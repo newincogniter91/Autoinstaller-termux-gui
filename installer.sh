@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION
+#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.1
 #  Distro: Adelie, AlmaLinux, Alpine, Arch, Artix, Chimera,
 #          Debian, Deepin, Fedora, Manjaro, OpenSUSE, Oracle,
 #          Pardus, Rocky, Trisquel, Ubuntu, Void
@@ -14,14 +14,13 @@ R='\033[0;31m'
 G='\033[0;32m'
 Y='\033[1;33m'
 C='\033[0;36m'
-B='\033[1;34m'
 NC='\033[0m'
 
 banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║    TERMUX-X11 LINUX DESKTOP SETUP v2.0      ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.1       ║"
     echo "║   All Distros    - All DEs -     - TX11     ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -34,9 +33,7 @@ banner
 echo -e "${Y}--- [1/5] Updating system and installing core packages ---${NC}"
 
 pkg update -y && pkg upgrade -y
-
 pkg install -y termux-x11-repo x11-repo
-
 pkg install -y \
     termux-x11-nightly \
     x11-utils \
@@ -64,18 +61,18 @@ echo    "║   1)  Debian        (Stable, Recommended)   ║"
 echo    "║   2)  Ubuntu 25.10  (Popular, Large repos)  ║"
 echo    "║   3)  Trisquel GNU  (Free Debian-based)     ║"
 echo    "║   4)  Pardus        (Turkish Debian-based)  ║"
-echo    "║                                             ║"
+echo    "║                                              ║"
 echo    "║   --- Arch based ---                        ║"
 echo    "║   5)  Arch Linux    (Advanced users)        ║"
 echo    "║   6)  Artix Linux   (Arch, no systemd)      ║"
 echo    "║   7)  Manjaro       (Arch, user-friendly)   ║"
-echo    "║                                             ║"
+echo    "║                                              ║"
 echo    "║   --- RPM based ---                         ║"
 echo    "║   8)  Fedora        (Modern, cutting-edge)  ║"
 echo    "║   9)  AlmaLinux     (RHEL compatible)       ║"
 echo    "║   10) Oracle Linux  (Enterprise RHEL)       ║"
 echo    "║   11) Rocky Linux   (RHEL compatible)       ║"
-echo    "║                                             ║"
+echo    "║                                              ║"
 echo    "║   --- Independent ---                       ║"
 echo    "║   12) Alpine Linux  (Ultra minimal, musl)   ║"
 echo    "║   13) Void Linux    (Runit, independent)    ║"
@@ -111,14 +108,13 @@ esac
 
 echo -e "${G}✓ Selected: $DNAME${NC}"
 
-# Install proot-distro and the chosen distro only if NOT native
 if [ "$PKG_TYPE" != "pkg" ]; then
     pkg install -y proot-distro
     echo -e "${Y}--- [2/5] Installing $DNAME via proot-distro ---${NC}"
     proot-distro install $DISTRO
     echo -e "${G}✓ $DNAME installed.${NC}"
 else
-    echo -e "${G}✓ Native Termux selected — skipping proot-distro.${NC}"
+    echo -e "${G}✓ Native Termux — skipping proot-distro.${NC}"
 fi
 sleep 1
 
@@ -143,124 +139,208 @@ echo -e "╚══════════════════════�
 read -p "Select a desktop (1-5): " de_choice
 
 # ==============================================================
-# Build install + appearance commands per PKG_TYPE and DE
+# Package lists — all verified per distro/DE
 # ==============================================================
 
 case $PKG_TYPE in
 
-    # ---- NATIVE TERMUX (pkg) ----
-    # Packages come from Termux's own repos (x11-repo must be enabled).
-    # Appearance packages verified for Termux:
-    #   arc-theme-gnome    -> arc GTK theme in Termux x11-repo
-    #   papirus-icon-theme -> OK in Termux x11-repo
-    #   noto-fonts-emoji   -> correct name in Termux repo
-    #   ttf-dejavu         -> correct name in Termux repo
-    #   qt5ct              -> OK in Termux x11-repo
-    #   lxappearance       -> OK in Termux x11-repo
+    # ====================================================================
+    # NATIVE TERMUX (pkg / x11-repo)
+    # Notes:
+    #   XFCE4: pkg=xfce4, launcher=dbus-launch --exit-with-session xfce4-session
+    #   LXQt:  pkg=lxqt,  launcher=startlxqt (includes lxqt-session)
+    #   MATE:  pkg=mate-desktop (Termux x11-repo meta), launcher=mate-session
+    #          mate-session-manager is bundled inside mate-desktop in x11-repo
+    #   Fluxbox: pkg=fluxbox, launcher=fluxbox
+    #   Openbox: pkg=openbox + openbox-menu + pypanel + xorg-xsetroot
+    #            launcher=openbox (openbox-session does NOT exist in Termux)
+    #   Appearance: arc-theme-gnome, papirus-icon-theme, noto-fonts-emoji,
+    #               ttf-dejavu, qt5ct, lxappearance — all in x11-repo
+    # ====================================================================
     pkg)
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4";                            START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt";                             START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-desktop";                     START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                          START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xorg-xsetroot";    START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-desktop dbus"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox openbox-menu pypanel xorg-xsetroot"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="pkg install -y $DE_PKGS"
         APPEAR_CMD="pkg install -y $APPEAR_PKGS"
         ;;
 
-    # ---- APT (Debian, Ubuntu, Trisquel, Pardus, Deepin) ----
-    # Appearance packages verified:
-    #   arc-theme              -> OK in Debian/Ubuntu main repos
-    #   papirus-icon-theme     -> OK in Debian/Ubuntu main repos
-    #   fonts-noto-color-emoji -> correct name (color emoji)
-    #   ttf-dejavu-extra       -> replaces "fonts-ubuntu" (does NOT exist on Debian)
-    #   qt5ct                  -> OK
-    #   lxappearance           -> OK
+    # ====================================================================
+    # APT — Debian, Ubuntu, Trisquel, Pardus, Deepin
+    # Notes:
+    #   XFCE4: xfce4 + xfce4-goodies. Launcher: dbus-launch xfce4-session
+    #   LXQt:  lxqt (meta includes lxqt-session). Launcher: startlxqt
+    #   MATE:  mate-desktop-environment (includes mate-session-manager,
+    #          marco, mate-panel, caja). Launcher: mate-session
+    #          mate-session-manager is a dependency, always pulled in.
+    #   Fluxbox: fluxbox. Launcher: fluxbox
+    #   Openbox: openbox + openbox-menu + pypanel + x11-xserver-utils
+    #            Launcher: openbox (NOT openbox-session, doesn't exist on apt)
+    #   Appearance: arc-theme, papirus-icon-theme, fonts-noto-color-emoji,
+    #               ttf-dejavu-extra (NOT fonts-ubuntu, doesn't exist on Debian),
+    #               qt5ct, lxappearance
+    # ====================================================================
     apt)
         UPD="apt update -y && apt upgrade -y"
         EXTRA="dbus-x11 xauth fonts-noto"
         APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";                           START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt";                                           START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-desktop-environment";                       START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                                        START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox openbox-menu pypanel x11-xserver-utils"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt sddm"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-desktop-environment dbus-x11"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox openbox-menu pypanel x11-xserver-utils"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA"
         APPEAR_CMD="apt install -y $APPEAR_PKGS"
         ;;
 
-    # ---- PACMAN (Arch, Artix, Manjaro) ----
-    # Appearance packages verified:
-    #   arc-gtk-theme          -> correct name on Arch (NOT arc-theme)
-    #   papirus-icon-theme     -> OK in extra repo
-    #   noto-fonts-emoji       -> correct name on Arch
-    #   ttf-ubuntu-font-family -> correct name on Arch (in extra repo)
-    #   qt5ct                  -> OK
-    #   lxappearance           -> OK
+    # ====================================================================
+    # PACMAN — Arch, Artix, Manjaro
+    # Notes:
+    #   XFCE4: xfce4 + xfce4-goodies. Launcher: dbus-launch xfce4-session
+    #   LXQt:  lxqt (meta group, includes lxqt-session). Launcher: startlxqt
+    #   MATE:  mate + mate-extra (mate group includes mate-session-manager,
+    #          marco, mate-panel, caja). mate-extra adds pluma, atril, etc.
+    #          Launcher: mate-session
+    #   Fluxbox: fluxbox. Launcher: fluxbox
+    #   Openbox: openbox + pypanel + xorg-xsetroot
+    #            Launcher: openbox (openbox-session is just an alias for openbox on Arch)
+    #   Appearance: arc-gtk-theme (NOT arc-theme on Arch), papirus-icon-theme,
+    #               noto-fonts-emoji, ttf-ubuntu-font-family, qt5ct, lxappearance
+    # ====================================================================
     pacman)
         UPD="pacman -Syu --noconfirm"
         EXTRA="dbus xorg-xauth noto-fonts"
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";                        START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt";                                        START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate mate-extra";                             START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                                     START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox python-pyxdg pypanel xorg-xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate mate-extra dbus"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox pypanel xorg-xsetroot"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA"
         APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS"
         ;;
 
-    # ---- DNF (Fedora, AlmaLinux, Oracle, Rocky) ----
-    # Appearance packages verified:
-    #   arc-theme                     -> OK in Fedora repos
-    #   papirus-icon-theme            -> OK in Fedora repos
-    #   google-noto-color-emoji-fonts -> correct name (NOT google-noto-emoji-fonts)
-    #   google-noto-sans-fonts        -> correct name for Noto text font
-    #   qt5ct                         -> OK
-    #   lxappearance                  -> OK
+    # ====================================================================
+    # DNF — Fedora, AlmaLinux, Oracle, Rocky
+    # Notes:
+    #   XFCE4: @xfce-desktop group. Launcher: dbus-launch xfce4-session
+    #   LXQt:  @lxqt-desktop group. Launcher: startlxqt
+    #   MATE:  mate-session-manager is NOT always in @mate-desktop on DNF distros.
+    #          Install explicitly: mate-session-manager + marco + mate-panel +
+    #          mate-desktop + caja + dbus-x11
+    #          Launcher: dbus-launch mate-session
+    #   Fluxbox: fluxbox. Launcher: fluxbox
+    #   Openbox: openbox + pypanel + xorg-x11-server-utils
+    #            Launcher: openbox
+    #   Appearance: arc-theme, papirus-icon-theme,
+    #               google-noto-color-emoji-fonts (NOT google-noto-emoji-fonts),
+    #               google-noto-sans-fonts, qt5ct, lxappearance
+    # ====================================================================
     dnf)
         UPD="dnf update -y"
         EXTRA="dbus-x11 xauth google-noto-fonts-common"
         APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="@xfce-desktop";                          START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="@lxqt-desktop";                          START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="@mate-desktop";                          START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                                START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xorg-x11-server-utils";  START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="@xfce-desktop dbus-x11"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="@lxqt-desktop"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-session-manager marco mate-panel mate-desktop caja dbus-x11"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox pypanel xorg-x11-server-utils"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA"
         APPEAR_CMD="dnf install -y $APPEAR_PKGS"
         ;;
 
-    # ---- APK (Alpine, Chimera, Adelie) ----
-    # Appearance packages verified:
-    #   arc-theme          -> NOT in Alpine/Chimera/Adelie repos, removed
-    #   papirus-icon-theme -> OK in Alpine community repo
-    #   font-noto          -> correct; includes emoji; "font-noto-emoji" does NOT exist standalone
-    #   font-dejavu        -> safe fallback font, always available
-    #   qt5ct              -> OK in Alpine community repo
-    #   lxappearance       -> in testing repo; added with @testing fallback
+    # ====================================================================
+    # APK — Alpine, Chimera, Adelie
+    # Notes:
+    #   XFCE4: xfce4 + xfce4-extras (meta in Alpine). Launcher: dbus-launch xfce4-session
+    #   LXQt:  lxqt + lxqt-session (session manager separate in Alpine!)
+    #          Launcher: startlxqt
+    #   MATE:  mate-desktop is NOT a full meta on Alpine.
+    #          Need: marco mate-panel mate-session-manager caja dbus-x11
+    #          Launcher: dbus-launch mate-session
+    #   Fluxbox: fluxbox. Launcher: fluxbox
+    #   Openbox: openbox + pypanel + xsetroot
+    #            Launcher: openbox
+    #   Appearance: arc-theme NOT in Alpine repos (removed).
+    #               papirus-icon-theme OK, font-noto OK (includes emoji),
+    #               font-dejavu OK, qt5ct OK,
+    #               lxappearance in testing repo (fallback added)
+    # ====================================================================
     apk)
         UPD="apk update && apk upgrade"
         EXTRA="dbus-x11 xauth font-noto"
         APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-extras";      START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt";                     START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-desktop";             START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                  START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-extras dbus-x11"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt lxqt-session"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="marco mate-panel mate-session-manager caja dbus-x11"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox pypanel xsetroot"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA"
@@ -270,49 +350,84 @@ case $PKG_TYPE in
               apk update && apk add lxappearance@testing))"
         ;;
 
-    # ---- XBPS (Void Linux) ----
-    # Appearance packages verified:
-    #   arc-theme          -> OK in Void main repo
-    #   papirus-icon-theme -> OK in Void repos
-    #   noto-fonts-emoji   -> correct name on Void Linux
-    #   font-ubuntu-ttf    -> correct name on Void (NOT font-ubuntu)
-    #   qt5ct              -> OK in Void repos
-    #   lxappearance       -> OK in Void repos
+    # ====================================================================
+    # XBPS — Void Linux
+    # Notes:
+    #   XFCE4: xfce4 + xfce4-goodies. Launcher: dbus-launch xfce4-session
+    #   LXQt:  lxqt (meta includes lxqt-session on Void). Launcher: startlxqt
+    #   MATE:  mate (meta group on Void includes mate-session-manager,
+    #          marco, mate-panel, caja). mate-extra adds extra apps.
+    #          Launcher: dbus-launch mate-session
+    #   Fluxbox: fluxbox. Launcher: fluxbox
+    #   Openbox: openbox + pypanel + xsetroot
+    #            Launcher: openbox
+    #   Appearance: arc-theme OK in Void, papirus-icon-theme OK,
+    #               noto-fonts-emoji OK, font-ubuntu-ttf (NOT font-ubuntu!),
+    #               qt5ct OK, lxappearance OK
+    # ====================================================================
     xbps)
         UPD="xbps-install -Suy"
         EXTRA="dbus-x11 xauth noto-fonts-ttf"
         APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";     START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt";                     START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate mate-extra";          START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                  START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate mate-extra dbus-x11"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox pypanel xsetroot"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA"
         APPEAR_CMD="xbps-install -y $APPEAR_PKGS"
         ;;
 
-    # ---- ZYPPER (OpenSUSE) ----
-    # Appearance packages verified:
-    #   metatheme-arc-common         -> correct name on OpenSUSE base repos
-    #                                   (arc-gtk-theme is only on OBS)
-    #   papirus-icon-theme           -> OK in OpenSUSE repos
-    #   google-noto-coloremoji-fonts -> correct name on OpenSUSE Tumbleweed/Leap
-    #   google-noto-sans-fonts       -> correct name on OpenSUSE
-    #   qt5ct                        -> OK in OpenSUSE repos
-    #   lxappearance                 -> OK in OpenSUSE repos
+    # ====================================================================
+    # ZYPPER — OpenSUSE
+    # Notes:
+    #   XFCE4: xfce4 + xfce4-goodies. Launcher: dbus-launch xfce4-session
+    #   LXQt:  lxqt (pattern). Launcher: startlxqt
+    #   MATE:  On OpenSUSE the pattern is "mate" (zypper install -t pattern mate).
+    #          But for proot (no systemd) install individual pkgs:
+    #          mate-session-manager marco mate-panel caja dbus-1-x11
+    #          Launcher: dbus-launch mate-session
+    #   Fluxbox: fluxbox. Launcher: fluxbox
+    #   Openbox: openbox + python3-pyxdg + xsetroot
+    #            Launcher: openbox
+    #   Appearance: metatheme-arc-common (NOT arc-gtk-theme, that's OBS-only),
+    #               papirus-icon-theme OK,
+    #               google-noto-coloremoji-fonts (correct OpenSUSE name),
+    #               google-noto-sans-fonts OK, qt5ct OK, lxappearance OK
+    # ====================================================================
     zypper)
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
         EXTRA="dbus-1-x11 xauth google-noto-fonts"
         APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";            START="startxfce4";      DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt";                            START="startlxqt";       DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-desktop";                    START="mate-session";    DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox";                         START="fluxbox";         DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox python3-pyxdg xsetroot";  START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus-1-x11"
+               START="dbus-launch --exit-with-session xfce4-session"
+               DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt"
+               START="startlxqt"
+               DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-session-manager marco mate-panel caja dbus-1-x11"
+               START="dbus-launch --exit-with-session mate-session"
+               DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox"
+               START="fluxbox"
+               DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox python3-pyxdg xsetroot"
+               START="openbox"
+               DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA"
@@ -321,7 +436,7 @@ case $PKG_TYPE in
 esac
 
 # ==============================================================
-# Install DE — native uses pkg directly, proot uses login
+# Install DE
 # ==============================================================
 echo -e "${G}✓ Selected: $DE_NAME${NC}"
 echo -e "${Y}--- [3/5] Installing $DE_NAME inside $DNAME ---${NC}"
@@ -356,12 +471,10 @@ echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
 echo ""
 read -p "$(echo -e ${Y})Do you want to install the recommended appearance packages? [Y/n]: $(echo -e ${NC})" appear_choice
-
 appear_choice="${appear_choice:-Y}"
 
 if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
     echo -e "${Y}--- [4/5] Installing appearance packages inside $DNAME ---${NC}"
-    echo -e "${Y}(This may take a few minutes...)${NC}"
     if [ "$PKG_TYPE" = "pkg" ]; then
         bash -c "$APPEAR_CMD"
     else
@@ -376,22 +489,19 @@ fi
 sleep 1
 
 # ==============================================================
-# 5. GENERATE AUTOSTART CONFIG FOR FLUXBOX/OPENBOX
+# 5. AUTOSTART EXTRAS FOR FLUXBOX / OPENBOX
 # ==============================================================
 
 FLUXBOX_EXTRA=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
-    FLUXBOX_EXTRA='
-    mkdir -p ~/.fluxbox
-    fluxbox-generate_menu 2>/dev/null || true'
+    FLUXBOX_EXTRA='mkdir -p ~/.fluxbox && fluxbox-generate_menu 2>/dev/null || true'
 fi
 
-OPENBOX_EXTRA=""
+OPENBOX_AUTOSTART=""
 if [ "$DE_NAME" = "Openbox" ]; then
-    OPENBOX_EXTRA='
-    mkdir -p ~/.config/openbox
-    cat > ~/.config/openbox/autostart <<OBAUTO
-xsetroot -solid gray
+    OPENBOX_AUTOSTART='mkdir -p ~/.config/openbox
+cat > ~/.config/openbox/autostart <<OBAUTO
+xsetroot -solid gray &
 pypanel &
 OBAUTO'
 fi
@@ -401,18 +511,12 @@ fi
 # ==============================================================
 echo -e "${Y}--- [5/5] Creating ~/start.sh launcher ---${NC}"
 
-# Native Termux launcher (no proot-distro login)
+# ---- NATIVE TERMUX launcher (no proot) ----
 if [ "$PKG_TYPE" = "pkg" ]; then
 
 cat > ~/start.sh <<STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
-
-# ============================================================
-#  START SCRIPT
-#  Distro  : Native Termux (no proot)
-#  Desktop : $DE_NAME
-#  Display : Termux-X11
-# ============================================================
+# START: Native Termux + $DE_NAME — Termux-X11
 
 R='\033[0;31m'
 G='\033[0;32m'
@@ -421,71 +525,58 @@ C='\033[0;36m'
 NC='\033[0m'
 
 echo -e "\${C}╔══════════════════════════════════╗\${NC}"
-echo -e "\${C}║  Starting: Native Termux + $DE_NAME\${NC}"
+echo -e "\${C}║  Native Termux + $DE_NAME         \${NC}"
 echo -e "\${C}╚══════════════════════════════════╝\${NC}"
 
-# --- Kill old sessions ---
-echo -e "\${Y}Cleaning up previous sessions...\${NC}"
-pkill -f "termux-x11"        2>/dev/null
-pkill -f "pulseaudio"        2>/dev/null
-pkill -f "virgl_test_server" 2>/dev/null
+echo -e "\${Y}Cleaning up old sessions...\${NC}"
+kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
+pkill -f virgl_test_server 2>/dev/null
 sleep 1
 
-# --- Start Termux-X11 ---
-echo -e "\${Y}Starting Termux-X11 display server on :0 ...\${NC}"
-termux-x11 :0 -xstartup "" &
-TX11_PID=\$!
-sleep 2
-
-# --- Start PulseAudio ---
 echo -e "\${Y}Starting PulseAudio...\${NC}"
 pulseaudio --start \
-    --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
-    --exit-idle-time=-1
+  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
+  --exit-idle-time=-1
 sleep 1
 
-# --- Start VirGL hardware acceleration ---
-echo -e "\${Y}Starting VirGL hardware acceleration...\${NC}"
+echo -e "\${Y}Starting VirGL acceleration...\${NC}"
 virgl_test_server_android &
 VIRGL_PID=\$!
 sleep 1
 
-echo -e "\${G}✓ Services ready. Open the Termux-X11 app now!\${NC}"
-echo -e "\${C}Launching $DE_NAME (Native Termux)...\${NC}"
-sleep 2
+echo -e "\${Y}Starting Termux-X11 on :0 ...\${NC}"
+export XDG_RUNTIME_DIR=\${TMPDIR}
+termux-x11 :0 >/dev/null &
+sleep 3
 
-# --- Set environment and launch DE directly (no proot) ---
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+sleep 1
+
+echo -e "\${G}✓ Open the Termux-X11 app now!\${NC}"
+echo -e "\${C}Launching $DE_NAME...\${NC}"
+
 export DISPLAY=:0
+export PULSE_SERVER=127.0.0.1
 export GALLIUM_DRIVER=virpipe
 export MESA_GL_VERSION_OVERRIDE=4.0
-export PULSE_SERVER=tcp:127.0.0.1
-export XDG_RUNTIME_DIR="\$TMPDIR/runtime-termux"
-mkdir -p "\$XDG_RUNTIME_DIR"
-chmod 700 "\$XDG_RUNTIME_DIR"
+export XDG_RUNTIME_DIR=\${TMPDIR}
 $FLUXBOX_EXTRA
-$OPENBOX_EXTRA
+$OPENBOX_AUTOSTART
 $START
 
-# --- Cleanup on exit ---
 echo -e "\${Y}Session ended. Cleaning up...\${NC}"
-kill \$TX11_PID   2>/dev/null
-kill \$VIRGL_PID  2>/dev/null
+kill \$VIRGL_PID 2>/dev/null
 pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Goodbye!\${NC}"
 STARTSCRIPT
 
-# proot-distro launcher
+# ---- PROOT-DISTRO launcher ----
 else
 
 cat > ~/start.sh <<STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
-
-# ============================================================
-#  START SCRIPT
-#  Distro  : $DNAME  ($DISTRO)
-#  Desktop : $DE_NAME
-#  Display : Termux-X11
-# ============================================================
+# START: $DNAME proot + $DE_NAME — Termux-X11
 
 R='\033[0;31m'
 G='\033[0;32m'
@@ -494,58 +585,51 @@ C='\033[0;36m'
 NC='\033[0m'
 
 echo -e "\${C}╔══════════════════════════════════╗\${NC}"
-echo -e "\${C}║  Starting: $DNAME + $DE_NAME\${NC}"
+echo -e "\${C}║  $DNAME + $DE_NAME\${NC}"
 echo -e "\${C}╚══════════════════════════════════╝\${NC}"
 
-# --- Kill old sessions ---
-echo -e "\${Y}Cleaning up previous sessions...\${NC}"
-pkill -f "termux-x11"        2>/dev/null
-pkill -f "pulseaudio"        2>/dev/null
-pkill -f "virgl_test_server" 2>/dev/null
+echo -e "\${Y}Cleaning up old sessions...\${NC}"
+kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
+pkill -f virgl_test_server 2>/dev/null
 sleep 1
 
-# --- Start Termux-X11 ---
-echo -e "\${Y}Starting Termux-X11 display server on :0 ...\${NC}"
-termux-x11 :0 -xstartup "" &
-TX11_PID=\$!
-sleep 2
-
-# --- Start PulseAudio ---
 echo -e "\${Y}Starting PulseAudio...\${NC}"
 pulseaudio --start \
-    --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
-    --exit-idle-time=-1
+  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
+  --exit-idle-time=-1
 sleep 1
 
-# --- Start VirGL hardware acceleration ---
-echo -e "\${Y}Starting VirGL hardware acceleration...\${NC}"
+echo -e "\${Y}Starting VirGL acceleration...\${NC}"
 virgl_test_server_android &
 VIRGL_PID=\$!
 sleep 1
 
-echo -e "\${G}✓ Services ready. Open the Termux-X11 app now!\${NC}"
-echo -e "\${C}Launching $DE_NAME in $DNAME...\${NC}"
-sleep 2
+echo -e "\${Y}Starting Termux-X11 on :0 ...\${NC}"
+export XDG_RUNTIME_DIR=\${TMPDIR}
+termux-x11 :0 >/dev/null &
+sleep 3
 
-# --- Launch proot-distro session ---
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+sleep 1
+
+echo -e "\${G}✓ Open the Termux-X11 app now!\${NC}"
+echo -e "\${C}Launching $DE_NAME in $DNAME...\${NC}"
+
 proot-distro login $DISTRO --shared-tmp -- bash -c "
-    export DISPLAY=:0
-    export GALLIUM_DRIVER=virpipe
-    export MESA_GL_VERSION_OVERRIDE=4.0
-    export PULSE_SERVER=tcp:127.0.0.1
-    export XDG_RUNTIME_DIR=/tmp/runtime-root
-    mkdir -p \\\$XDG_RUNTIME_DIR
-    chmod 700 \\\$XDG_RUNTIME_DIR
-    $FLUXBOX_EXTRA
-    $OPENBOX_EXTRA
-    export DBUS_SESSION_BUS_ADDRESS=\\\$(dbus-daemon --session --print-address --fork 2>/dev/null)
-    $START
+  export DISPLAY=:0
+  export PULSE_SERVER=127.0.0.1
+  export GALLIUM_DRIVER=virpipe
+  export MESA_GL_VERSION_OVERRIDE=4.0
+  export XDG_RUNTIME_DIR=/tmp/runtime-root
+  mkdir -p \\\$XDG_RUNTIME_DIR && chmod 700 \\\$XDG_RUNTIME_DIR
+  $FLUXBOX_EXTRA
+  $OPENBOX_AUTOSTART
+  $START
 "
 
-# --- Cleanup on exit ---
 echo -e "\${Y}Session ended. Cleaning up...\${NC}"
-kill \$TX11_PID   2>/dev/null
-kill \$VIRGL_PID  2>/dev/null
+kill \$VIRGL_PID 2>/dev/null
 pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Goodbye!\${NC}"
 STARTSCRIPT
@@ -566,9 +650,9 @@ echo "║  Distro  : $DNAME"
 echo "║  Desktop : $DE_NAME"
 echo "║  Display : Termux-X11"
 if [ "$APPEAR_INSTALLED" = true ]; then
-echo "║  Appearance packages: Installed ✓"
+echo "║  Appearance: Installed ✓"
 else
-echo "║  Appearance packages: Skipped"
+echo "║  Appearance: Skipped"
 fi
 echo "╠══════════════════════════════════════════════╣"
 echo "║  HOW TO START:                               ║"
@@ -576,8 +660,7 @@ echo "║                                              ║"
 echo "║  1. Install the Termux-X11 APK from:        ║"
 echo "║     github.com/termux/termux-x11/releases   ║"
 echo "║                                              ║"
-echo "║  2. In Termux, run:                          ║"
-echo "║     ./start.sh                               ║"
+echo "║  2. In Termux, run:  ./start.sh              ║"
 echo "║                                              ║"
 echo "║  3. Open the Termux-X11 app on your device  ║"
 echo "║                                              ║"
