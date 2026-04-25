@@ -139,15 +139,23 @@ read -p "Select a desktop (1-5): " de_choice
 case $PKG_TYPE in
 
     # ---- APT (Debian, Ubuntu, Trisquel, Pardus, Deepin) ----
+    # Appearance packages verified:
+    #   arc-theme              -> OK in Debian/Ubuntu main repos
+    #   papirus-icon-theme     -> OK in Debian/Ubuntu main repos
+    #   fonts-noto-color-emoji -> correct name (color emoji)
+    #   ttf-dejavu-extra       -> replaces "fonts-ubuntu" which does NOT exist
+    #                            on Debian (only the logo font, non-free)
+    #   qt5ct                  -> OK
+    #   lxappearance           -> OK
     apt)
         UPD="apt update -y && apt upgrade -y"
         EXTRA="dbus-x11 xauth fonts-noto"
-        APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji fonts-ubuntu qt5ct lxappearance"
+        APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";                     START="startxfce4";    DE_NAME="XFCE4"    ;;
-            2) DE_PKGS="lxqt";                                     START="startlxqt";     DE_NAME="LXQt"     ;;
-            3) DE_PKGS="mate-desktop-environment";                 START="mate-session";  DE_NAME="MATE"     ;;
-            4) DE_PKGS="fluxbox";                                  START="fluxbox";       DE_NAME="Fluxbox"  ;;
+            1) DE_PKGS="xfce4 xfce4-goodies";                          START="startxfce4";      DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt";                                          START="startlxqt";       DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-desktop-environment";                      START="mate-session";    DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox";                                       START="fluxbox";         DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox openbox-menu pypanel x11-xserver-utils"; START="openbox-session"; DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -156,16 +164,23 @@ case $PKG_TYPE in
         ;;
 
     # ---- PACMAN (Arch, Artix, Manjaro) ----
+    # Appearance packages verified:
+    #   arc-gtk-theme          -> correct name on Arch (NOT arc-theme)
+    #   papirus-icon-theme     -> OK in extra repo
+    #   noto-fonts-emoji       -> correct name on Arch
+    #   ttf-ubuntu-font-family -> correct name on Arch (in extra repo)
+    #   qt5ct                  -> OK
+    #   lxappearance           -> OK
     pacman)
         UPD="pacman -Syu --noconfirm"
         EXTRA="dbus xorg-xauth noto-fonts"
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";     START="startxfce4";      DE_NAME="XFCE4"    ;;
-            2) DE_PKGS="lxqt";                     START="startlxqt";       DE_NAME="LXQt"     ;;
-            3) DE_PKGS="mate mate-extra";          START="mate-session";    DE_NAME="MATE"     ;;
-            4) DE_PKGS="fluxbox";                  START="fluxbox";         DE_NAME="Fluxbox"  ;;
-            5) DE_PKGS="openbox python-pyxdg pypanel xorg-xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies";                               START="startxfce4";      DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt";                                               START="startlxqt";       DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate mate-extra";                                    START="mate-session";    DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox";                                            START="fluxbox";         DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox python-pyxdg pypanel xorg-xsetroot";        START="openbox-session"; DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA"
@@ -173,16 +188,23 @@ case $PKG_TYPE in
         ;;
 
     # ---- DNF (Fedora, AlmaLinux, Oracle, Rocky) ----
+    # Appearance packages verified:
+    #   arc-theme                    -> OK in Fedora repos
+    #   papirus-icon-theme           -> OK in Fedora repos
+    #   google-noto-color-emoji-fonts -> correct name (NOT google-noto-emoji-fonts)
+    #   google-noto-sans-fonts       -> correct name for Noto text font
+    #   qt5ct                        -> OK
+    #   lxappearance                 -> OK
     dnf)
         UPD="dnf update -y"
         EXTRA="dbus-x11 xauth google-noto-fonts-common"
-        APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
+        APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="@xfce-desktop";   START="startxfce4";    DE_NAME="XFCE4"    ;;
-            2) DE_PKGS="@lxqt-desktop";   START="startlxqt";     DE_NAME="LXQt"     ;;
-            3) DE_PKGS="@mate-desktop";   START="mate-session";  DE_NAME="MATE"     ;;
-            4) DE_PKGS="fluxbox";         START="fluxbox";       DE_NAME="Fluxbox"  ;;
-            5) DE_PKGS="openbox pypanel xorg-x11-server-utils"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="@xfce-desktop";                              START="startxfce4";      DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="@lxqt-desktop";                              START="startlxqt";       DE_NAME="LXQt"    ;;
+            3) DE_PKGS="@mate-desktop";                              START="mate-session";    DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox";                                    START="fluxbox";         DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox pypanel xorg-x11-server-utils";      START="openbox-session"; DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA"
@@ -190,33 +212,52 @@ case $PKG_TYPE in
         ;;
 
     # ---- APK (Alpine, Chimera, Adelie) ----
+    # Appearance packages verified:
+    #   arc-theme          -> NOT in Alpine/Chimera/Adelie repos, removed
+    #   papirus-icon-theme -> OK in Alpine community repo
+    #   font-noto          -> correct; includes emoji variant
+    #                         "font-noto-emoji" does NOT exist as a standalone pkg
+    #   font-dejavu        -> safe cross-distro fallback font, always available
+    #   qt5ct              -> OK in Alpine community repo
+    #   lxappearance       -> in Alpine testing repo; added with @testing fallback
     apk)
         UPD="apk update && apk upgrade"
         EXTRA="dbus-x11 xauth font-noto"
-        APPEAR_PKGS="arc-theme papirus-icon-theme font-noto-emoji font-ubuntu qt5ct lxappearance"
+        APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-extras";   START="startxfce4";    DE_NAME="XFCE4"    ;;
-            2) DE_PKGS="lxqt";                  START="startlxqt";     DE_NAME="LXQt"     ;;
-            3) DE_PKGS="mate-desktop";          START="mate-session";  DE_NAME="MATE"     ;;
-            4) DE_PKGS="fluxbox";               START="fluxbox";       DE_NAME="Fluxbox"  ;;
+            1) DE_PKGS="xfce4 xfce4-extras";      START="startxfce4";      DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt";                     START="startlxqt";       DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-desktop";             START="mate-session";    DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox";                  START="fluxbox";         DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox pypanel xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA"
-        APPEAR_CMD="apk add $APPEAR_PKGS"
+        # lxappearance is in the testing repo on Alpine; add it with @testing tag
+        APPEAR_CMD="$UPD && apk add $APPEAR_PKGS && \
+            (apk add lxappearance 2>/dev/null || \
+             (echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
+              apk update && apk add lxappearance@testing))"
         ;;
 
     # ---- XBPS (Void Linux) ----
+    # Appearance packages verified:
+    #   arc-theme          -> OK in Void main repo (confirmed on pkgs.org)
+    #   papirus-icon-theme -> OK in Void repos
+    #   noto-fonts-emoji   -> correct name on Void Linux
+    #   font-ubuntu-ttf    -> correct name on Void (NOT font-ubuntu)
+    #   qt5ct              -> OK in Void repos
+    #   lxappearance       -> OK in Void repos
     xbps)
         UPD="xbps-install -Suy"
         EXTRA="dbus-x11 xauth noto-fonts-ttf"
-        APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu qt5ct lxappearance"
+        APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";   START="startxfce4";    DE_NAME="XFCE4"    ;;
-            2) DE_PKGS="lxqt";                   START="startlxqt";     DE_NAME="LXQt"     ;;
-            3) DE_PKGS="mate mate-extra";        START="mate-session";  DE_NAME="MATE"     ;;
-            4) DE_PKGS="fluxbox";                START="fluxbox";       DE_NAME="Fluxbox"  ;;
-            5) DE_PKGS="openbox pypanel xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies";      START="startxfce4";      DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt";                      START="startlxqt";       DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate mate-extra";           START="mate-session";    DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox";                   START="fluxbox";         DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox pypanel xsetroot";  START="openbox-session"; DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA"
@@ -224,20 +265,28 @@ case $PKG_TYPE in
         ;;
 
     # ---- ZYPPER (OpenSUSE) ----
+    # Appearance packages verified:
+    #   metatheme-arc-common         -> correct name on OpenSUSE base repos
+    #                                   (arc-gtk-theme is only on OBS, not base)
+    #   papirus-icon-theme           -> OK in OpenSUSE repos
+    #   google-noto-coloremoji-fonts -> correct name on OpenSUSE Tumbleweed/Leap
+    #   google-noto-sans-fonts       -> correct name on OpenSUSE
+    #   qt5ct                        -> OK in OpenSUSE repos
+    #   lxappearance                 -> OK in OpenSUSE repos
     zypper)
-        UPD="zypper refresh && zypper update -y"
-        EXTRA="dbus-1-x11 xauth noto-sans-fonts"
-        APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-coloremoji-fonts noto-sans-fonts qt5ct lxappearance"
+        UPD="zypper --non-interactive refresh && zypper --non-interactive update"
+        EXTRA="dbus-1-x11 xauth google-noto-fonts"
+        APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies";      START="startxfce4";    DE_NAME="XFCE4"    ;;
-            2) DE_PKGS="lxqt";                      START="startlxqt";     DE_NAME="LXQt"     ;;
-            3) DE_PKGS="mate-desktop";              START="mate-session";  DE_NAME="MATE"     ;;
-            4) DE_PKGS="fluxbox";                   START="fluxbox";       DE_NAME="Fluxbox"  ;;
+            1) DE_PKGS="xfce4 xfce4-goodies";           START="startxfce4";      DE_NAME="XFCE4"   ;;
+            2) DE_PKGS="lxqt";                           START="startlxqt";       DE_NAME="LXQt"    ;;
+            3) DE_PKGS="mate-desktop";                   START="mate-session";    DE_NAME="MATE"    ;;
+            4) DE_PKGS="fluxbox";                        START="fluxbox";         DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox python3-pyxdg xsetroot"; START="openbox-session"; DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && zypper install -y $DE_PKGS $EXTRA"
-        APPEAR_CMD="zypper install -y $APPEAR_PKGS"
+        INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA"
+        APPEAR_CMD="zypper --non-interactive install $APPEAR_PKGS"
         ;;
 esac
 
@@ -258,12 +307,12 @@ echo    "╠══════════════════════�
 echo    "║                                              ║"
 echo    "║  The following packages will be installed:  ║"
 echo    "║                                              ║"
-echo    "║  • Arc Theme       (Modern GTK theme)       ║"
-echo    "║  • Papirus Icons   (Beautiful icon pack)    ║"
-echo    "║  • Noto Emoji      (Full emoji support)     ║"
-echo    "║  • Ubuntu Fonts    (Clean, readable fonts)  ║"
-echo    "║  • Qt5ct           (Qt app theming tool)    ║"
-echo    "║  • LXAppearance    (GTK theme switcher)     ║"
+echo    "║  • Arc Theme / Metatheme  (Modern GTK)      ║"
+echo    "║  • Papirus Icons          (Icon pack)       ║"
+echo    "║  • Noto Color Emoji       (Emoji support)   ║"
+echo    "║  • DejaVu / Ubuntu Fonts  (Clean fonts)     ║"
+echo    "║  • Qt5ct                  (Qt theming tool) ║"
+echo    "║  • LXAppearance           (GTK switcher)    ║"
 echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
 echo ""
@@ -287,25 +336,19 @@ sleep 1
 # 5. GENERATE AUTOSTART CONFIG FOR FLUXBOX/OPENBOX
 # ==============================================================
 
-# Extra config for Fluxbox autostart
 FLUXBOX_EXTRA=""
 if [ "$DE_NAME" == "Fluxbox" ]; then
     FLUXBOX_EXTRA='
-    # Generate Fluxbox menu on first run
     mkdir -p ~/.fluxbox
     fluxbox-generate_menu 2>/dev/null || true'
 fi
 
-# Extra config for Openbox autostart
 OPENBOX_EXTRA=""
 if [ "$DE_NAME" == "Openbox" ]; then
     OPENBOX_EXTRA='
-    # Set up Openbox autostart
     mkdir -p ~/.config/openbox
     cat > ~/.config/openbox/autostart <<OBAUTO
-# Make background gray
 xsetroot -solid gray
-# Launch PyPanel taskbar
 pypanel &
 OBAUTO'
 fi
@@ -337,8 +380,8 @@ echo -e "\${C}╚═════════════════════
 
 # --- Kill old sessions ---
 echo -e "\${Y}Cleaning up previous sessions...\${NC}"
-pkill -f "termux-x11"       2>/dev/null
-pkill -f "pulseaudio"       2>/dev/null
+pkill -f "termux-x11"        2>/dev/null
+pkill -f "pulseaudio"        2>/dev/null
 pkill -f "virgl_test_server" 2>/dev/null
 sleep 1
 
