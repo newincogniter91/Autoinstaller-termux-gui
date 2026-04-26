@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.3
+#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.4
 #  Designed to run on a FRESH Termux install with NO repos.
 #
 #  Distro: Native Termux (no proot), Debian, Ubuntu, Trisquel,
@@ -23,56 +23,67 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.3       ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.4       ║"
     echo "║   All Distros    - All DEs -     - TX11     ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
 
 # ==============================================================
-# STEP 1 — Bootstrap: update base Termux, add repos, update again
-# This is the correct sequence for a FRESH Termux install.
-# Must do pkg update TWICE: once before adding repos,
-# once after — so that x11-repo and termux-x11-repo packages
-# become available to install.
+# STEP 1 — Bootstrap Termux from scratch
+#
+# Correct sequence confirmed by termux-x11 official README,
+# LinuxDroidMaster scripts, and ivonblog.com guide:
+#
+#   1. pkg update + upgrade        (update base packages)
+#   2. pkg install x11-repo        (enables the x11 package repo)
+#                                   termux-x11-nightly lives here
+#                                   NO separate "termux-x11-repo" pkg!
+#   3. pkg update                  (re-read package lists with x11-repo)
+#   4. pkg install termux-x11-nightly pulseaudio virglrenderer-android
+#                                   proot-distro wget curl
+#                                   (x11-utils and x11-fonts do NOT
+#                                    exist in Termux — do not install them)
 # ==============================================================
 banner
-echo -e "${Y}--- [1/5] Bootstrapping Termux from scratch ---${NC}"
-echo -e "${Y}  Step 1/3: Updating base Termux packages...${NC}"
+echo -e "${Y}--- [1/5] Bootstrapping Termux (fresh install safe) ---${NC}"
 
-# Allow pkg to run non-interactively (accept all prompts)
 export DEBIAN_FRONTEND=noninteractive
 
-pkg update -y
-pkg upgrade -y
+echo -e "${Y}  Updating base Termux packages...${NC}"
+pkg update -y && pkg upgrade -y
 
-echo -e "${Y}  Step 2/3: Adding x11-repo and termux-x11-repo...${NC}"
-
-# Install the repo enabler packages.
-# These add new sources to /data/data/com.termux/files/usr/etc/apt/sources.list.d/
-# They MUST be installed before the packages they provide can be found.
+echo -e "${Y}  Adding x11-repo (provides termux-x11-nightly)...${NC}"
+# x11-repo is the ONLY repo package needed.
+# There is no "termux-x11-repo" package — that does not exist.
 pkg install -y x11-repo
-pkg install -y termux-x11-repo
 
-echo -e "${Y}  Step 3/3: Updating package lists with new repos...${NC}"
-
-# CRITICAL: update again after adding repos so apt sees the new packages.
+echo -e "${Y}  Re-reading package lists with x11-repo enabled...${NC}"
 pkg update -y
 
-echo -e "${Y}  Installing core runtime packages...${NC}"
-
+echo -e "${Y}  Installing core packages...${NC}"
+# Verified package names that actually exist in Termux repos:
+#   termux-x11-nightly  — the X11 server companion (from x11-repo)
+#   pulseaudio          — audio server
+#   virglrenderer-android — GPU acceleration
+#   proot-distro        — for running proot Linux distros
+#   wget curl bash      — download/scripting utilities
+#
+# Packages that do NOT exist in Termux (removed):
+#   x11-utils    → does not exist
+#   x11-fonts    → does not exist
+#   xorg-xrdb    → does not exist in Termux native pkg
+#   termux-x11-repo → does not exist (it's x11-repo, not termux-x11-repo)
 pkg install -y \
     termux-x11-nightly \
-    x11-utils \
-    x11-fonts \
-    xorg-xrdb \
     pulseaudio \
     virglrenderer-android \
+    proot-distro \
     wget \
     curl \
     bash
 
-echo -e "${G}✓ Termux bootstrap complete. All repos and core packages ready.${NC}"
+echo -e "${G}✓ Termux bootstrap complete.${NC}"
 sleep 1
 
 # ==============================================================
@@ -138,24 +149,22 @@ esac
 
 echo -e "${G}✓ Selected: $DNAME${NC}"
 
-# Install proot-distro and bootstrap the chosen distro (skip for native)
 if [ "$PKG_TYPE" != "pkg" ]; then
-    echo -e "${Y}--- [2/5] Installing proot-distro and $DNAME ---${NC}"
-    pkg install -y proot-distro
+    echo -e "${Y}--- [2/5] Bootstrapping $DNAME via proot-distro ---${NC}"
     proot-distro install "$DISTRO"
     echo -e "${G}✓ $DNAME installed.${NC}"
 else
-    echo -e "${G}✓ Native Termux selected — no proot needed.${NC}"
+    echo -e "${G}✓ Native Termux — no proot needed.${NC}"
 fi
 sleep 1
 
 # ==============================================================
 # STEP 3 — Desktop environment selection
-# Native Termux: MATE excluded (mate-session-manager not in x11-repo)
 # ==============================================================
 banner
 
 if [ "$PKG_TYPE" = "pkg" ]; then
+    # Native: no MATE (mate-session-manager never compiled for Termux)
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║       SELECT DESKTOP ENVIRONMENT / WM        ║"
     echo    "╠══════════════════════════════════════════════╣"
@@ -166,16 +175,15 @@ if [ "$PKG_TYPE" = "pkg" ]; then
     echo    "║   4) Openbox  (Minimal, configurable)       ║"
     echo    "║                                              ║"
     echo    "║   ⚠ MATE unavailable on Native Termux       ║"
-    echo    "║     (choose a proot distro for MATE)        ║"
+    echo    "║     Use a proot distro for MATE             ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a desktop (1-4): " de_raw
-    # Map 1-4 to internal slot (no slot 3 = MATE)
     case $de_raw in
-        1) de_choice=1 ;;
-        2) de_choice=2 ;;
-        3) de_choice=4 ;;
-        4) de_choice=5 ;;
+        1) de_choice=1 ;;  # XFCE4
+        2) de_choice=2 ;;  # LXQt
+        3) de_choice=4 ;;  # Fluxbox
+        4) de_choice=5 ;;  # Openbox
         *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
     esac
 else
@@ -197,41 +205,32 @@ else
 fi
 
 # ==============================================================
-# Package definitions per package manager + DE
-# All package names verified. See inline comments for sources.
+# Package definitions — all names verified against actual repos
 # ==============================================================
 
 case $PKG_TYPE in
 
     # ----------------------------------------------------------
-    # NATIVE TERMUX (pkg)
-    # Repos already added in Step 1.
-    # XFCE4   : xfce4 xfce4-goodies dbus
-    #           launcher: env DISPLAY=:0 dbus-launch --exit-with-session xfce4-session
-    #           (confirmed by LinuxDroidMaster official script)
-    # LXQt    : lxqt  (includes lxqt-session in Termux x11-repo)
-    #           launcher: env DISPLAY=:0 startlxqt
-    # Fluxbox : fluxbox
-    #           launcher: env DISPLAY=:0 fluxbox
-    # Openbox : openbox pypanel xorg-xsetroot
-    #           launcher: env DISPLAY=:0 openbox
-    # Appearance (all in x11-repo / main Termux repo):
-    #   arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance
+    # NATIVE TERMUX
+    # Verified available in x11-repo / main Termux repo:
+    #   xfce4, xfce4-goodies, dbus, lxqt, fluxbox,
+    #   openbox, pypanel, xorg-xsetroot
+    # Launcher: termux-x11 :0 -xstartup "..."  (official method)
     # ----------------------------------------------------------
     pkg)
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus"
-               START="env DISPLAY=:0 dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="lxqt"
-               START="env DISPLAY=:0 startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             4) DE_PKGS="fluxbox"
-               START="env DISPLAY=:0 fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox pypanel xorg-xsetroot"
-               START="env DISPLAY=:0 openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="pkg install -y $DE_PKGS"
@@ -240,16 +239,6 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # APT — Debian, Ubuntu, Trisquel, Pardus, Deepin
-    # XFCE4   : xfce4 xfce4-goodies dbus-x11
-    # LXQt    : lxqt  (meta, includes lxqt-session)
-    # MATE    : mate-desktop-environment dbus-x11
-    #           (meta pulls mate-session-manager, marco, mate-panel, caja)
-    # Fluxbox : fluxbox
-    # Openbox : openbox openbox-menu pypanel x11-xserver-utils
-    # Appearance:
-    #   arc-theme papirus-icon-theme fonts-noto-color-emoji
-    #   ttf-dejavu-extra (NOT fonts-ubuntu — doesn't exist on Debian)
-    #   qt5ct lxappearance
     # ----------------------------------------------------------
     apt)
         UPD="apt update -y && apt upgrade -y"
@@ -257,19 +246,19 @@ case $PKG_TYPE in
         APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
-               START="dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="lxqt"
-               START="startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             3) DE_PKGS="mate-desktop-environment dbus-x11"
-               START="dbus-launch --exit-with-session mate-session"
+               DE_START="dbus-launch --exit-with-session mate-session"
                DE_NAME="MATE"    ;;
             4) DE_PKGS="fluxbox"
-               START="fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox openbox-menu pypanel x11-xserver-utils"
-               START="openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -279,15 +268,6 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # PACMAN — Arch, Artix, Manjaro
-    # XFCE4   : xfce4 xfce4-goodies dbus
-    # LXQt    : lxqt  (group, includes lxqt-session)
-    # MATE    : mate mate-extra dbus
-    #           (group includes mate-session-manager, marco, mate-panel, caja)
-    # Fluxbox : fluxbox
-    # Openbox : openbox pypanel xorg-xsetroot
-    # Appearance:
-    #   arc-gtk-theme (NOT arc-theme — that's the Debian name!)
-    #   papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance
     # ----------------------------------------------------------
     pacman)
         UPD="pacman -Syu --noconfirm"
@@ -295,19 +275,19 @@ case $PKG_TYPE in
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus"
-               START="dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="lxqt"
-               START="startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             3) DE_PKGS="mate mate-extra dbus"
-               START="dbus-launch --exit-with-session mate-session"
+               DE_START="dbus-launch --exit-with-session mate-session"
                DE_NAME="MATE"    ;;
             4) DE_PKGS="fluxbox"
-               START="fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox pypanel xorg-xsetroot"
-               START="openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -317,17 +297,6 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # DNF — Fedora, AlmaLinux, Oracle, Rocky
-    # XFCE4   : @xfce-desktop dbus-x11
-    # LXQt    : @lxqt-desktop
-    # MATE    : Individual packages — mate-session-manager is NOT
-    #           always pulled by @mate-desktop group in proot:
-    #           mate-session-manager marco mate-panel mate-desktop caja dbus-x11
-    # Fluxbox : fluxbox
-    # Openbox : openbox pypanel xorg-x11-server-utils
-    # Appearance:
-    #   arc-theme papirus-icon-theme
-    #   google-noto-color-emoji-fonts (NOT google-noto-emoji-fonts!)
-    #   google-noto-sans-fonts qt5ct lxappearance
     # ----------------------------------------------------------
     dnf)
         UPD="dnf update -y"
@@ -335,19 +304,19 @@ case $PKG_TYPE in
         APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="@xfce-desktop dbus-x11"
-               START="dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="@lxqt-desktop"
-               START="startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             3) DE_PKGS="mate-session-manager marco mate-panel mate-desktop caja dbus-x11"
-               START="dbus-launch --exit-with-session mate-session"
+               DE_START="dbus-launch --exit-with-session mate-session"
                DE_NAME="MATE"    ;;
             4) DE_PKGS="fluxbox"
-               START="fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox pypanel xorg-x11-server-utils"
-               START="openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -357,16 +326,6 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # APK — Alpine, Chimera, Adelie
-    # XFCE4   : xfce4 xfce4-extras dbus-x11
-    # LXQt    : lxqt lxqt-session  (session manager separate in Alpine!)
-    # MATE    : No meta package — install components:
-    #           marco mate-panel mate-session-manager caja dbus-x11
-    # Fluxbox : fluxbox
-    # Openbox : openbox pypanel xsetroot
-    # Appearance:
-    #   arc-theme NOT in Alpine repos (removed)
-    #   papirus-icon-theme font-noto font-dejavu qt5ct
-    #   lxappearance via @testing fallback
     # ----------------------------------------------------------
     apk)
         UPD="apk update && apk upgrade"
@@ -374,19 +333,19 @@ case $PKG_TYPE in
         APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-extras dbus-x11"
-               START="dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="lxqt lxqt-session"
-               START="startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             3) DE_PKGS="marco mate-panel mate-session-manager caja dbus-x11"
-               START="dbus-launch --exit-with-session mate-session"
+               DE_START="dbus-launch --exit-with-session mate-session"
                DE_NAME="MATE"    ;;
             4) DE_PKGS="fluxbox"
-               START="fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox pypanel xsetroot"
-               START="openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -399,16 +358,6 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # XBPS — Void Linux
-    # XFCE4   : xfce4 xfce4-goodies dbus-x11
-    # LXQt    : lxqt  (Void meta includes lxqt-session)
-    # MATE    : mate mate-extra dbus-x11
-    #           (Void mate group includes mate-session-manager, marco, mate-panel, caja)
-    # Fluxbox : fluxbox
-    # Openbox : openbox pypanel xsetroot
-    # Appearance:
-    #   arc-theme papirus-icon-theme noto-fonts-emoji
-    #   font-ubuntu-ttf (NOT font-ubuntu — doesn't exist on Void!)
-    #   qt5ct lxappearance
     # ----------------------------------------------------------
     xbps)
         UPD="xbps-install -Suy"
@@ -416,19 +365,19 @@ case $PKG_TYPE in
         APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
-               START="dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="lxqt"
-               START="startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             3) DE_PKGS="mate mate-extra dbus-x11"
-               START="dbus-launch --exit-with-session mate-session"
+               DE_START="dbus-launch --exit-with-session mate-session"
                DE_NAME="MATE"    ;;
             4) DE_PKGS="fluxbox"
-               START="fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox pypanel xsetroot"
-               START="openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -438,17 +387,6 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # ZYPPER — OpenSUSE
-    # XFCE4   : xfce4 xfce4-goodies dbus-1-x11
-    # LXQt    : lxqt
-    # MATE    : Individual packages (no reliable meta in base repo):
-    #           mate-session-manager marco mate-panel caja dbus-1-x11
-    # Fluxbox : fluxbox
-    # Openbox : openbox python3-pyxdg xsetroot
-    # Appearance:
-    #   metatheme-arc-common (NOT arc-gtk-theme — only on OBS!)
-    #   papirus-icon-theme
-    #   google-noto-coloremoji-fonts (correct OpenSUSE package name)
-    #   google-noto-sans-fonts qt5ct lxappearance
     # ----------------------------------------------------------
     zypper)
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
@@ -456,19 +394,19 @@ case $PKG_TYPE in
         APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus-1-x11"
-               START="dbus-launch --exit-with-session xfce4-session"
+               DE_START="dbus-launch --exit-with-session xfce4-session"
                DE_NAME="XFCE4"   ;;
             2) DE_PKGS="lxqt"
-               START="startlxqt"
+               DE_START="startlxqt"
                DE_NAME="LXQt"    ;;
             3) DE_PKGS="mate-session-manager marco mate-panel caja dbus-1-x11"
-               START="dbus-launch --exit-with-session mate-session"
+               DE_START="dbus-launch --exit-with-session mate-session"
                DE_NAME="MATE"    ;;
             4) DE_PKGS="fluxbox"
-               START="fluxbox"
+               DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox python3-pyxdg xsetroot"
-               START="openbox"
+               DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -478,7 +416,7 @@ case $PKG_TYPE in
 esac
 
 # ==============================================================
-# STEP 3b — Install the chosen DE
+# STEP 3b — Install DE
 # ==============================================================
 echo -e "${G}✓ Selected: $DE_NAME${NC}"
 echo -e "${Y}--- [3/5] Installing $DE_NAME in $DNAME ---${NC}"
@@ -529,7 +467,7 @@ fi
 sleep 1
 
 # ==============================================================
-# STEP 5 — Extra autostart setup for Fluxbox / Openbox
+# STEP 5 — Extra init for Fluxbox / Openbox
 # ==============================================================
 FLUXBOX_INIT=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
@@ -546,15 +484,13 @@ OBAUTO'
 fi
 
 # ==============================================================
-# STEP 6 — Generate ~/start.sh launcher
+# STEP 6 — Generate ~/start.sh
 # ==============================================================
 echo -e "${Y}--- [5/5] Creating ~/start.sh launcher ---${NC}"
 
-# -------------------------------------------------------
-# Native Termux launcher
-# Uses termux-x11 -xstartup flag to launch DE directly.
-# This is the method confirmed by LinuxDroidMaster scripts.
-# -------------------------------------------------------
+# ---- Native Termux launcher ----
+# Uses termux-x11 :0 -xstartup "..." — the official documented method.
+# The DE is passed directly as -xstartup so no separate DISPLAY export needed.
 if [ "$PKG_TYPE" = "pkg" ]; then
 
 cat > ~/start.sh << STARTSCRIPT
@@ -562,31 +498,27 @@ cat > ~/start.sh << STARTSCRIPT
 # Native Termux + $DE_NAME — Termux-X11
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
 
-echo -e "\${C}╔══════════════════════╗\${NC}"
-echo -e "\${C}║ Native Termux + $DE_NAME \${NC}"
-echo -e "\${C}╚══════════════════════╝\${NC}"
+echo -e "\${C}╔══════════════════════════════╗\${NC}"
+echo -e "\${C}║  Native Termux + $DE_NAME  \${NC}"
+echo -e "\${C}╚══════════════════════════════╝\${NC}"
 
-# Kill any leftover sessions
 echo -e "\${Y}Stopping old sessions...\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio          2>/dev/null
-pkill -f virgl_test_server   2>/dev/null
+pkill -f pulseaudio            2>/dev/null
+pkill -f virgl_test_server     2>/dev/null
 sleep 1
 
-# PulseAudio
 echo -e "\${Y}Starting PulseAudio...\${NC}"
-pulseaudio --start \\
-  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \\
+pulseaudio --start \
+  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
   --exit-idle-time=-1
 sleep 1
 
-# VirGL GPU acceleration
 echo -e "\${Y}Starting VirGL acceleration...\${NC}"
 virgl_test_server_android &
 VIRGL_PID=\$!
 sleep 1
 
-# Environment
 export XDG_RUNTIME_DIR=\${TMPDIR}
 export PULSE_SERVER=127.0.0.1
 export GALLIUM_DRIVER=virpipe
@@ -595,13 +527,10 @@ export MESA_GL_VERSION_OVERRIDE=4.0
 $FLUXBOX_INIT
 $OPENBOX_INIT
 
-# Start Termux-X11 with the DE as xstartup command
-# (confirmed method from LinuxDroidMaster and termux-x11 README)
-echo -e "\${G}Starting Termux-X11 + $DE_NAME...\${NC}"
-termux-x11 :0 -xstartup "$START" &
+echo -e "\${G}Launching $DE_NAME via Termux-X11...\${NC}"
+termux-x11 :0 -xstartup "$DE_START" &
 sleep 3
 
-# Open the Termux-X11 Android app automatically
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
 
 wait
@@ -611,55 +540,45 @@ pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
-# -------------------------------------------------------
-# proot-distro launcher
-# Starts termux-x11 server first (in background),
-# then enters proot and launches the DE inside it.
-# -------------------------------------------------------
+# ---- proot-distro launcher ----
 else
 
 cat > ~/start.sh << STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
-# $DNAME (proot) + $DE_NAME — Termux-X11
+# $DNAME proot + $DE_NAME — Termux-X11
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
 
-echo -e "\${C}╔══════════════════════╗\${NC}"
-echo -e "\${C}║ $DNAME + $DE_NAME \${NC}"
-echo -e "\${C}╚══════════════════════╝\${NC}"
+echo -e "\${C}╔══════════════════════════════╗\${NC}"
+echo -e "\${C}║  $DNAME + $DE_NAME  \${NC}"
+echo -e "\${C}╚══════════════════════════════╝\${NC}"
 
-# Kill any leftover sessions
 echo -e "\${Y}Stopping old sessions...\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio          2>/dev/null
-pkill -f virgl_test_server   2>/dev/null
+pkill -f pulseaudio            2>/dev/null
+pkill -f virgl_test_server     2>/dev/null
 sleep 1
 
-# PulseAudio
 echo -e "\${Y}Starting PulseAudio...\${NC}"
-pulseaudio --start \\
-  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \\
+pulseaudio --start \
+  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
   --exit-idle-time=-1
 sleep 1
 
-# VirGL GPU acceleration
 echo -e "\${Y}Starting VirGL acceleration...\${NC}"
 virgl_test_server_android &
 VIRGL_PID=\$!
 sleep 1
 
-# Start Termux-X11 server (in Termux, not inside proot)
 echo -e "\${Y}Starting Termux-X11 server on :0 ...\${NC}"
 export XDG_RUNTIME_DIR=\${TMPDIR}
 termux-x11 :0 >/dev/null &
 sleep 3
 
-# Open the Termux-X11 Android app automatically
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
 sleep 1
 
-echo -e "\${G}✓ Termux-X11 ready. Launching $DE_NAME in $DNAME...\${NC}"
+echo -e "\${G}Launching $DE_NAME in $DNAME...\${NC}"
 
-# Enter proot and launch DE
 proot-distro login $DISTRO --shared-tmp -- bash -c "
   export DISPLAY=:0
   export PULSE_SERVER=127.0.0.1
@@ -669,7 +588,7 @@ proot-distro login $DISTRO --shared-tmp -- bash -c "
   mkdir -p \\\$XDG_RUNTIME_DIR && chmod 700 \\\$XDG_RUNTIME_DIR
   $FLUXBOX_INIT
   $OPENBOX_INIT
-  $START
+  $DE_START
 "
 
 echo -e "\${Y}Session ended. Cleaning up...\${NC}"
