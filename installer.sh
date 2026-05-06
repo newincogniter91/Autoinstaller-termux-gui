@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.4
+#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.5
 #  Designed to run on a FRESH Termux install with NO repos.
 #
 #  Distro: Native Termux (no proot), Debian, Ubuntu, Trisquel,
@@ -23,7 +23,7 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.4       ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.5       ║"
     echo "║   All Distros    - All DEs -     - TX11     ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -32,18 +32,14 @@ banner() {
 # ==============================================================
 # STEP 1 — Bootstrap Termux from scratch
 #
-# Correct sequence confirmed by termux-x11 official README,
-# LinuxDroidMaster scripts, and ivonblog.com guide:
-#
-#   1. pkg update + upgrade        (update base packages)
-#   2. pkg install x11-repo        (enables the x11 package repo)
-#                                   termux-x11-nightly lives here
-#                                   NO separate "termux-x11-repo" pkg!
-#   3. pkg update                  (re-read package lists with x11-repo)
+# Correct sequence (confirmed by termux-x11 official README):
+#   1. pkg update + upgrade
+#   2. pkg install x11-repo       ← the ONLY repo pkg needed
+#                                    "termux-x11-repo" does NOT exist
+#   3. pkg update                 ← re-read lists after adding repo
 #   4. pkg install termux-x11-nightly pulseaudio virglrenderer-android
-#                                   proot-distro wget curl
-#                                   (x11-utils and x11-fonts do NOT
-#                                    exist in Termux — do not install them)
+#                                    proot-distro wget curl bash
+#      NOTE: x11-utils, x11-fonts, xorg-xrdb do NOT exist in Termux
 # ==============================================================
 banner
 echo -e "${Y}--- [1/5] Bootstrapping Termux (fresh install safe) ---${NC}"
@@ -53,27 +49,13 @@ export DEBIAN_FRONTEND=noninteractive
 echo -e "${Y}  Updating base Termux packages...${NC}"
 pkg update -y && pkg upgrade -y
 
-echo -e "${Y}  Adding x11-repo (provides termux-x11-nightly)...${NC}"
-# x11-repo is the ONLY repo package needed.
-# There is no "termux-x11-repo" package — that does not exist.
+echo -e "${Y}  Adding x11-repo...${NC}"
 pkg install -y x11-repo
 
 echo -e "${Y}  Re-reading package lists with x11-repo enabled...${NC}"
 pkg update -y
 
 echo -e "${Y}  Installing core packages...${NC}"
-# Verified package names that actually exist in Termux repos:
-#   termux-x11-nightly  — the X11 server companion (from x11-repo)
-#   pulseaudio          — audio server
-#   virglrenderer-android — GPU acceleration
-#   proot-distro        — for running proot Linux distros
-#   wget curl bash      — download/scripting utilities
-#
-# Packages that do NOT exist in Termux (removed):
-#   x11-utils    → does not exist
-#   x11-fonts    → does not exist
-#   xorg-xrdb    → does not exist in Termux native pkg
-#   termux-x11-repo → does not exist (it's x11-repo, not termux-x11-repo)
 pkg install -y \
     termux-x11-nightly \
     pulseaudio \
@@ -164,7 +146,6 @@ sleep 1
 banner
 
 if [ "$PKG_TYPE" = "pkg" ]; then
-    # Native: no MATE (mate-session-manager never compiled for Termux)
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║       SELECT DESKTOP ENVIRONMENT / WM        ║"
     echo    "╠══════════════════════════════════════════════╣"
@@ -180,10 +161,10 @@ if [ "$PKG_TYPE" = "pkg" ]; then
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a desktop (1-4): " de_raw
     case $de_raw in
-        1) de_choice=1 ;;  # XFCE4
-        2) de_choice=2 ;;  # LXQt
-        3) de_choice=4 ;;  # Fluxbox
-        4) de_choice=5 ;;  # Openbox
+        1) de_choice=1 ;;
+        2) de_choice=2 ;;
+        3) de_choice=4 ;;
+        4) de_choice=5 ;;
         *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
     esac
 else
@@ -205,17 +186,41 @@ else
 fi
 
 # ==============================================================
-# Package definitions — all names verified against actual repos
+# Package definitions — fully verified per distro
+#
+# OPENBOX NOTES (critical fixes v2.5):
+#
+#  apt   : pkg=openbox + openbox-menu + tint2 + x11-xserver-utils
+#          launcher: openbox-session   ← binary exists on apt distros
+#          panel: tint2 (pypanel abandoned, not in Debian repos)
+#
+#  pacman: pkg=openbox + tint2 + xorg-xsetroot
+#          launcher: openbox-session   ← binary included in openbox pkg
+#          panel: tint2  (pypanel is AUR only — NOT in official repos!)
+#
+#  dnf   : pkg=openbox + xorg-x11-server-utils + xfce4-panel
+#          launcher: openbox-session
+#          panel: xfce4-panel  (tint2 REMOVED from Fedora 40+, pypanel absent)
+#
+#  apk   : pkg=openbox + tint2 + xsetroot
+#          launcher: openbox   ← openbox-session not available on Alpine
+#          panel: tint2 (available in Alpine community repo)
+#
+#  xbps  : pkg=openbox + tint2 + xsetroot
+#          launcher: openbox-session   ← binary exists on Void
+#          panel: tint2
+#
+#  zypper: pkg=openbox + lxpanel + xsetroot
+#          launcher: openbox-session
+#          panel: lxpanel  (tint2 has no official OpenSUSE package)
 # ==============================================================
 
 case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # NATIVE TERMUX
-    # Verified available in x11-repo / main Termux repo:
-    #   xfce4, xfce4-goodies, dbus, lxqt, fluxbox,
-    #   openbox, pypanel, xorg-xsetroot
-    # Launcher: termux-x11 :0 -xstartup "..."  (official method)
+    # openbox + openbox-menu + tint2 + xorg-xsetroot all in x11-repo
+    # launcher: openbox-session  (binary in openbox pkg for Termux)
     # ----------------------------------------------------------
     pkg)
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
@@ -229,8 +234,8 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xorg-xsetroot"
-               DE_START="openbox"
+            5) DE_PKGS="openbox openbox-menu tint2 xorg-xsetroot"
+               DE_START="openbox-session"
                DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="pkg install -y $DE_PKGS"
@@ -239,6 +244,8 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # APT — Debian, Ubuntu, Trisquel, Pardus, Deepin
+    # openbox-session binary IS included in the openbox pkg on apt
+    # tint2 is in Debian/Ubuntu repos (replaces pypanel)
     # ----------------------------------------------------------
     apt)
         UPD="apt update -y && apt upgrade -y"
@@ -257,8 +264,8 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox openbox-menu pypanel x11-xserver-utils"
-               DE_START="openbox"
+            5) DE_PKGS="openbox openbox-menu tint2 x11-xserver-utils"
+               DE_START="openbox-session"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -268,6 +275,9 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # PACMAN — Arch, Artix, Manjaro
+    # openbox-session binary IS included in the openbox pkg on Arch
+    # pypanel is AUR ONLY — NOT in official repos, use tint2 instead
+    # tint2 IS in Arch extra repo
     # ----------------------------------------------------------
     pacman)
         UPD="pacman -Syu --noconfirm"
@@ -286,8 +296,8 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xorg-xsetroot"
-               DE_START="openbox"
+            5) DE_PKGS="openbox tint2 xorg-xsetroot"
+               DE_START="openbox-session"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -297,6 +307,9 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # DNF — Fedora, AlmaLinux, Oracle, Rocky
+    # tint2 was REMOVED from Fedora 40+ repos — use xfce4-panel
+    # pypanel not available on Fedora at all
+    # openbox-session binary included in openbox pkg
     # ----------------------------------------------------------
     dnf)
         UPD="dnf update -y"
@@ -315,8 +328,8 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xorg-x11-server-utils"
-               DE_START="openbox"
+            5) DE_PKGS="openbox xfce4-panel xorg-x11-server-utils"
+               DE_START="openbox-session"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -326,6 +339,9 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # APK — Alpine, Chimera, Adelie
+    # openbox-session binary NOT available on Alpine — use openbox
+    # tint2 IS in Alpine community repo
+    # xsetroot available as standalone pkg
     # ----------------------------------------------------------
     apk)
         UPD="apk update && apk upgrade"
@@ -344,7 +360,7 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xsetroot"
+            5) DE_PKGS="openbox tint2 xsetroot"
                DE_START="openbox"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
@@ -358,6 +374,8 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # XBPS — Void Linux
+    # openbox-session binary IS included in openbox pkg on Void
+    # tint2 IS in Void repos
     # ----------------------------------------------------------
     xbps)
         UPD="xbps-install -Suy"
@@ -376,8 +394,8 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox pypanel xsetroot"
-               DE_START="openbox"
+            5) DE_PKGS="openbox tint2 xsetroot"
+               DE_START="openbox-session"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -387,6 +405,8 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # ZYPPER — OpenSUSE
+    # openbox-session binary IS included in openbox pkg on OpenSUSE
+    # tint2 has NO official OpenSUSE package — use lxpanel instead
     # ----------------------------------------------------------
     zypper)
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
@@ -405,8 +425,8 @@ case $PKG_TYPE in
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox python3-pyxdg xsetroot"
-               DE_START="openbox"
+            5) DE_PKGS="openbox lxpanel xsetroot"
+               DE_START="openbox-session"
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
@@ -467,7 +487,8 @@ fi
 sleep 1
 
 # ==============================================================
-# STEP 5 — Extra init for Fluxbox / Openbox
+# STEP 5 — Extra autostart setup for Fluxbox / Openbox
+# Openbox autostart: tint2 as panel (replaces pypanel everywhere)
 # ==============================================================
 FLUXBOX_INIT=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
@@ -478,19 +499,17 @@ OPENBOX_INIT=""
 if [ "$DE_NAME" = "Openbox" ]; then
     OPENBOX_INIT='mkdir -p ~/.config/openbox
 cat > ~/.config/openbox/autostart << OBAUTO
-xsetroot -solid gray &
-pypanel &
+xsetroot -solid "#2d2d2d" &
+tint2 &
 OBAUTO'
 fi
 
 # ==============================================================
-# STEP 6 — Generate ~/start.sh
+# STEP 6 — Generate ~/start.sh launcher
 # ==============================================================
 echo -e "${Y}--- [5/5] Creating ~/start.sh launcher ---${NC}"
 
 # ---- Native Termux launcher ----
-# Uses termux-x11 :0 -xstartup "..." — the official documented method.
-# The DE is passed directly as -xstartup so no separate DISPLAY export needed.
 if [ "$PKG_TYPE" = "pkg" ]; then
 
 cat > ~/start.sh << STARTSCRIPT
@@ -504,8 +523,8 @@ echo -e "\${C}╚═════════════════════
 
 echo -e "\${Y}Stopping old sessions...\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio            2>/dev/null
-pkill -f virgl_test_server     2>/dev/null
+pkill -f pulseaudio          2>/dev/null
+pkill -f virgl_test_server   2>/dev/null
 sleep 1
 
 echo -e "\${Y}Starting PulseAudio...\${NC}"
@@ -554,8 +573,8 @@ echo -e "\${C}╚═════════════════════
 
 echo -e "\${Y}Stopping old sessions...\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio            2>/dev/null
-pkill -f virgl_test_server     2>/dev/null
+pkill -f pulseaudio          2>/dev/null
+pkill -f virgl_test_server   2>/dev/null
 sleep 1
 
 echo -e "\${Y}Starting PulseAudio...\${NC}"
