@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.5
+#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.6
 #  Designed to run on a FRESH Termux install with NO repos.
 #
 #  Distro: Native Termux (no proot), Debian, Ubuntu, Trisquel,
@@ -11,6 +11,17 @@
 #  DE/WM:  XFCE4, LXQt, MATE(*), Fluxbox, Openbox
 #  (*) MATE NOT available on Native Termux (not in x11-repo)
 #  Display: Termux-X11 ONLY
+#
+#  KEY FIXES v2.6:
+#  - librsvg added to ALL distros: icon themes use SVG, without
+#    librsvg gdk-pixbuf cannot load them → Wnck crash → signal 6
+#  - adwaita-icon-theme added: libwnck needs "image-missing" icon
+#    as fallback, without it assertion fails and crashes everything
+#  - gdk-pixbuf-query-loaders --update-cache run after every install
+#    so the SVG loader is properly registered in the cache
+#  - openbox-session used on all distros except Alpine (uses openbox)
+#  - openbox config files copied from /etc/xdg/openbox/ on first run
+#  - pypanel replaced with tint2 everywhere (pypanel abandoned/AUR)
 # ==============================================================
 
 R='\033[0;31m'
@@ -23,7 +34,7 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.5       ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.6       ║"
     echo "║   All Distros    - All DEs -     - TX11     ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -34,11 +45,10 @@ banner() {
 #
 # Correct sequence (confirmed by termux-x11 official README):
 #   1. pkg update + upgrade
-#   2. pkg install x11-repo       ← the ONLY repo pkg needed
+#   2. pkg install x11-repo       ← ONLY repo pkg needed
 #                                    "termux-x11-repo" does NOT exist
 #   3. pkg update                 ← re-read lists after adding repo
-#   4. pkg install termux-x11-nightly pulseaudio virglrenderer-android
-#                                    proot-distro wget curl bash
+#   4. pkg install packages
 #      NOTE: x11-utils, x11-fonts, xorg-xrdb do NOT exist in Termux
 # ==============================================================
 banner
@@ -186,41 +196,13 @@ else
 fi
 
 # ==============================================================
-# Package definitions — fully verified per distro
-#
-# OPENBOX NOTES (critical fixes v2.5):
-#
-#  apt   : pkg=openbox + openbox-menu + tint2 + x11-xserver-utils
-#          launcher: openbox-session   ← binary exists on apt distros
-#          panel: tint2 (pypanel abandoned, not in Debian repos)
-#
-#  pacman: pkg=openbox + tint2 + xorg-xsetroot
-#          launcher: openbox-session   ← binary included in openbox pkg
-#          panel: tint2  (pypanel is AUR only — NOT in official repos!)
-#
-#  dnf   : pkg=openbox + xorg-x11-server-utils + xfce4-panel
-#          launcher: openbox-session
-#          panel: xfce4-panel  (tint2 REMOVED from Fedora 40+, pypanel absent)
-#
-#  apk   : pkg=openbox + tint2 + xsetroot
-#          launcher: openbox   ← openbox-session not available on Alpine
-#          panel: tint2 (available in Alpine community repo)
-#
-#  xbps  : pkg=openbox + tint2 + xsetroot
-#          launcher: openbox-session   ← binary exists on Void
-#          panel: tint2
-#
-#  zypper: pkg=openbox + lxpanel + xsetroot
-#          launcher: openbox-session
-#          panel: lxpanel  (tint2 has no official OpenSUSE package)
+# Package definitions — all verified, with crash fixes
 # ==============================================================
 
 case $PKG_TYPE in
 
     # ----------------------------------------------------------
-    # NATIVE TERMUX
-    # openbox + openbox-menu + tint2 + xorg-xsetroot all in x11-repo
-    # launcher: openbox-session  (binary in openbox pkg for Termux)
+    # NATIVE TERMUX (pkg / x11-repo)
     # ----------------------------------------------------------
     pkg)
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
@@ -244,12 +226,15 @@ case $PKG_TYPE in
 
     # ----------------------------------------------------------
     # APT — Debian, Ubuntu, Trisquel, Pardus, Deepin
-    # openbox-session binary IS included in the openbox pkg on apt
-    # tint2 is in Debian/Ubuntu repos (replaces pypanel)
+    #
+    # FIX: librsvg2-common  — SVG icon loader for gdk-pixbuf
+    #      adwaita-icon-theme — fallback icons needed by libwnck
+    #      gdk-pixbuf-query-loaders --update-cache — registers SVG
+    #      loader so it is actually used at runtime
     # ----------------------------------------------------------
     apt)
         UPD="apt update -y && apt upgrade -y"
-        EXTRA="dbus-x11 xauth fonts-noto"
+        EXTRA="dbus-x11 xauth fonts-noto librsvg2-common adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
@@ -269,19 +254,23 @@ case $PKG_TYPE in
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA"
-        APPEAR_CMD="apt install -y $APPEAR_PKGS"
+        INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
+        APPEAR_CMD="apt install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
     # ----------------------------------------------------------
     # PACMAN — Arch, Artix, Manjaro
-    # openbox-session binary IS included in the openbox pkg on Arch
-    # pypanel is AUR ONLY — NOT in official repos, use tint2 instead
-    # tint2 IS in Arch extra repo
+    #
+    # FIX: librsvg          — SVG loader (Papirus uses SVG icons!)
+    #      adwaita-icon-theme — libwnck fallback icon "image-missing"
+    #      gdk-pixbuf-query-loaders --update-cache — without this
+    #      even after installing librsvg the loader is not registered
+    #      and all GTK apps crash with the Wnck assertion error
+    # pypanel is AUR only — replaced with tint2 (official extra repo)
     # ----------------------------------------------------------
     pacman)
         UPD="pacman -Syu --noconfirm"
-        EXTRA="dbus xorg-xauth noto-fonts"
+        EXTRA="dbus xorg-xauth noto-fonts librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus"
@@ -301,19 +290,23 @@ case $PKG_TYPE in
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA"
-        APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS"
+        INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache"
+        APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache"
         ;;
 
     # ----------------------------------------------------------
     # DNF — Fedora, AlmaLinux, Oracle, Rocky
-    # tint2 was REMOVED from Fedora 40+ repos — use xfce4-panel
-    # pypanel not available on Fedora at all
-    # openbox-session binary included in openbox pkg
+    #
+    # FIX: librsvg2         — SVG loader
+    #      adwaita-icon-theme — libwnck fallback icons
+    #      gdk-pixbuf-query-loaders-64 on Fedora (64-bit binary)
+    #      with fallback to gdk-pixbuf-query-loaders
+    # tint2 removed from Fedora 40+ — replaced with xfce4-panel
+    # mate-session-manager listed explicitly (not in @mate-desktop)
     # ----------------------------------------------------------
     dnf)
         UPD="dnf update -y"
-        EXTRA="dbus-x11 xauth google-noto-fonts-common"
+        EXTRA="dbus-x11 xauth google-noto-fonts-common librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="@xfce-desktop dbus-x11"
@@ -333,19 +326,24 @@ case $PKG_TYPE in
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA"
-        APPEAR_CMD="dnf install -y $APPEAR_PKGS"
+        INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
+        APPEAR_CMD="dnf install -y $APPEAR_PKGS && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
         ;;
 
     # ----------------------------------------------------------
     # APK — Alpine, Chimera, Adelie
-    # openbox-session binary NOT available on Alpine — use openbox
-    # tint2 IS in Alpine community repo
-    # xsetroot available as standalone pkg
+    #
+    # FIX: librsvg          — SVG loader
+    #      adwaita-icon-theme — libwnck fallback icons
+    #      gdk-pixbuf-query-loaders --update-cache
+    # openbox-session NOT available on Alpine — use openbox directly
+    # lxqt-session must be listed separately (not in lxqt meta)
+    # MATE: no meta package on Alpine, components listed explicitly
+    # lxappearance in testing repo — fallback added automatically
     # ----------------------------------------------------------
     apk)
         UPD="apk update && apk upgrade"
-        EXTRA="dbus-x11 xauth font-noto"
+        EXTRA="dbus-x11 xauth font-noto librsvg adwaita-icon-theme"
         APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-extras dbus-x11"
@@ -365,21 +363,25 @@ case $PKG_TYPE in
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA"
+        INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         APPEAR_CMD="$UPD && apk add $APPEAR_PKGS && \
             (apk add lxappearance 2>/dev/null || \
              (echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && \
-              apk update && apk add lxappearance@testing))"
+              apk update && apk add lxappearance@testing)) && \
+            gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
     # ----------------------------------------------------------
     # XBPS — Void Linux
-    # openbox-session binary IS included in openbox pkg on Void
-    # tint2 IS in Void repos
+    #
+    # FIX: librsvg          — SVG loader
+    #      adwaita-icon-theme — libwnck fallback icons
+    #      gdk-pixbuf-query-loaders --update-cache
+    # font-ubuntu-ttf correct name (NOT font-ubuntu)
     # ----------------------------------------------------------
     xbps)
         UPD="xbps-install -Suy"
-        EXTRA="dbus-x11 xauth noto-fonts-ttf"
+        EXTRA="dbus-x11 xauth noto-fonts-ttf librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
@@ -399,18 +401,23 @@ case $PKG_TYPE in
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA"
-        APPEAR_CMD="xbps-install -y $APPEAR_PKGS"
+        INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
+        APPEAR_CMD="xbps-install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
     # ----------------------------------------------------------
     # ZYPPER — OpenSUSE
-    # openbox-session binary IS included in openbox pkg on OpenSUSE
-    # tint2 has NO official OpenSUSE package — use lxpanel instead
+    #
+    # FIX: librsvg2         — SVG loader
+    #      adwaita-icon-theme — libwnck fallback icons
+    #      gdk-pixbuf-query-loaders --update-cache
+    # metatheme-arc-common correct name (arc-gtk-theme is OBS only)
+    # google-noto-coloremoji-fonts correct OpenSUSE name
+    # tint2 no official pkg on OpenSUSE — replaced with lxpanel
     # ----------------------------------------------------------
     zypper)
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
-        EXTRA="dbus-1-x11 xauth google-noto-fonts"
+        EXTRA="dbus-1-x11 xauth google-noto-fonts librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus-1-x11"
@@ -430,8 +437,8 @@ case $PKG_TYPE in
                DE_NAME="Openbox" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
-        INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA"
-        APPEAR_CMD="zypper --non-interactive install $APPEAR_PKGS"
+        INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
+        APPEAR_CMD="zypper --non-interactive install $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 esac
 
@@ -487,8 +494,11 @@ fi
 sleep 1
 
 # ==============================================================
-# STEP 5 — Extra autostart setup for Fluxbox / Openbox
-# Openbox autostart: tint2 as panel (replaces pypanel everywhere)
+# STEP 5 — Extra autostart for Fluxbox / Openbox
+#
+# Openbox: copy default config files from /etc/xdg/openbox/ FIRST.
+# Without rc.xml and menu.xml, openbox-session crashes immediately.
+# tint2 is used as panel (pypanel is abandoned).
 # ==============================================================
 FLUXBOX_INIT=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
@@ -497,8 +507,12 @@ fi
 
 OPENBOX_INIT=""
 if [ "$DE_NAME" = "Openbox" ]; then
-    OPENBOX_INIT='mkdir -p ~/.config/openbox
-cat > ~/.config/openbox/autostart << OBAUTO
+    OPENBOX_INIT='
+mkdir -p ~/.config/openbox
+[ ! -f ~/.config/openbox/rc.xml ]    && cp /etc/xdg/openbox/rc.xml    ~/.config/openbox/ 2>/dev/null || true
+[ ! -f ~/.config/openbox/menu.xml ]  && cp /etc/xdg/openbox/menu.xml  ~/.config/openbox/ 2>/dev/null || true
+[ ! -f ~/.config/openbox/autostart ] && cp /etc/xdg/openbox/autostart ~/.config/openbox/ 2>/dev/null || true
+grep -q "tint2" ~/.config/openbox/autostart 2>/dev/null || cat >> ~/.config/openbox/autostart << OBAUTO
 xsetroot -solid "#2d2d2d" &
 tint2 &
 OBAUTO'
