@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.6
+#  TERMUX-X11 FULL SETUP SCRIPT - COMPLETE EDITION v2.7
 #  Designed to run on a FRESH Termux install with NO repos.
 #
 #  Distro: Native Termux (no proot), Debian, Ubuntu, Trisquel,
@@ -42,19 +42,56 @@ banner() {
 
 # ==============================================================
 # STEP 1 — Bootstrap Termux from scratch
-#
-# Correct sequence (confirmed by termux-x11 official README):
-#   1. pkg update + upgrade
-#   2. pkg install x11-repo       ← ONLY repo pkg needed
-#                                    "termux-x11-repo" does NOT exist
-#   3. pkg update                 ← re-read lists after adding repo
-#   4. pkg install packages
-#      NOTE: x11-utils, x11-fonts, xorg-xrdb do NOT exist in Termux
 # ==============================================================
 banner
 echo -e "${Y}--- [1/5] Bootstrapping Termux (fresh install safe) ---${NC}"
 
 export DEBIAN_FRONTEND=noninteractive
+
+install_kali_nethunter_chroot() {
+    NH_ROOTFS_URL="https://images.kali.org/nethunter/kali-nethunter-rootfs-minimal-arm64.tar.xz"
+    NH_INSTALLER_SCRIPT="https://gitlab.com/kalilinux/nethunter/build-scripts/kali-nethunter-project/-/raw/master/nethunter-rootless/install-nethunter-termux"
+    NH_ROOTFS_DIR="/data/local/nh-system"
+    NH_ARCHIVE="$HOME/kali-nethunter-rootfs-minimal-arm64.tar.xz"
+
+    echo -e "${Y}--- [Kali NetHunter Chroot] Preparing installation ---${NC}"
+    mkdir -p "$NH_ROOTFS_DIR"
+    chmod 755 "$(dirname "$NH_ROOTFS_DIR")"
+
+    if command -v nethunter-installer >/dev/null 2>&1; then
+        echo -e "${Y}Found nethunter-installer, using official installer...${NC}"
+        nethunter-installer || true
+    elif command -v wget >/dev/null 2>&1 || command -v curl >/dev/null 2>&1; then
+        echo -e "${Y}Fetching official NetHunter Termux installer...${NC}"
+        if command -v wget >/dev/null 2>&1; then
+            wget -qO- "$NH_INSTALLER_SCRIPT" | bash || true
+        else
+            curl -fsSL "$NH_INSTALLER_SCRIPT" | bash || true
+        fi
+    fi
+
+    if [ ! -d "$NH_ROOTFS_DIR" ] || [ -z "$(ls -A "$NH_ROOTFS_DIR" 2>/dev/null)" ]; then
+        echo -e "${Y}Downloading Kali NetHunter rootfs...${NC}"
+        if command -v wget >/dev/null 2>&1; then
+            wget -O "$NH_ARCHIVE" "$NH_ROOTFS_URL"
+        else
+            curl -L -o "$NH_ARCHIVE" "$NH_ROOTFS_URL"
+        fi
+        echo -e "${Y}Extracting rootfs to $NH_ROOTFS_DIR ...${NC}"
+        if command -v tsu >/dev/null 2>&1; then
+            tsu -c "mkdir -p '$NH_ROOTFS_DIR' && tar -xJf '$NH_ARCHIVE' -C '$NH_ROOTFS_DIR'"
+        elif [ "$(id -u)" = "0" ]; then
+            mkdir -p "$NH_ROOTFS_DIR"
+            tar -xJf "$NH_ARCHIVE" -C "$NH_ROOTFS_DIR"
+        else
+            echo -e "${R}Root privileges are required for Kali NetHunter Chroot installation.${NC}"
+            echo -e "${R}Install tsu or run this script as root before retrying.${NC}"
+            exit 1
+        fi
+    fi
+
+    echo -e "${G}✓ Kali NetHunter rootfs ready in $NH_ROOTFS_DIR.${NC}"
+}
 
 echo -e "${Y}  Updating base Termux packages...${NC}"
 pkg update -y && pkg upgrade -y
@@ -113,9 +150,10 @@ echo    "║   14) OpenSUSE      (YaST, rolling/stable)  ║"
 echo    "║   15) Chimera Linux (musl/LLVM based)       ║"
 echo    "║   16) Adelie Linux  (musl Alpine-like)      ║"
 echo    "║   17) Deepin        (Beautiful Chinese DE)  ║"
+echo    "║   18) Kali NetHunter Chroot (Rootful X11) ║"
 echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
-read -p "Select a distro (0-17): " distro_choice
+read -p "Select a distro (0-18): " distro_choice
 
 case $distro_choice in
     0)  DISTRO="native";      PKG_TYPE="pkg";    DNAME="Native Termux"  ;;
@@ -136,12 +174,15 @@ case $distro_choice in
     15) DISTRO="chimera";     PKG_TYPE="apk";    DNAME="Chimera Linux"  ;;
     16) DISTRO="adelie";      PKG_TYPE="apk";    DNAME="Adelie Linux"   ;;
     17) DISTRO="deepin";      PKG_TYPE="apt";    DNAME="Deepin"         ;;
+    18) DISTRO="kali-nh-chroot"; PKG_TYPE="chroot"; DNAME="Kali NetHunter Chroot" ;;
     *)  echo -e "${R}Invalid choice. Exiting.${NC}"; exit 1 ;;
 esac
 
 echo -e "${G}✓ Selected: $DNAME${NC}"
 
-if [ "$PKG_TYPE" != "pkg" ]; then
+if [ "$PKG_TYPE" = "chroot" ]; then
+    install_kali_nethunter_chroot
+elif [ "$PKG_TYPE" != "pkg" ]; then
     echo -e "${Y}--- [2/5] Bootstrapping $DNAME via proot-distro ---${NC}"
     proot-distro install "$DISTRO"
     echo -e "${G}✓ $DNAME installed.${NC}"
@@ -196,14 +237,9 @@ else
 fi
 
 # ==============================================================
-# Package definitions — all verified, with crash fixes
+# Package definitions
 # ==============================================================
-
 case $PKG_TYPE in
-
-    # ----------------------------------------------------------
-    # NATIVE TERMUX (pkg / x11-repo)
-    # ----------------------------------------------------------
     pkg)
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
         case $de_choice in
@@ -224,15 +260,7 @@ case $PKG_TYPE in
         APPEAR_CMD="pkg install -y $APPEAR_PKGS"
         ;;
 
-    # ----------------------------------------------------------
-    # APT — Debian, Ubuntu, Trisquel, Pardus, Deepin
-    #
-    # FIX: librsvg2-common  — SVG icon loader for gdk-pixbuf
-    #      adwaita-icon-theme — fallback icons needed by libwnck
-    #      gdk-pixbuf-query-loaders --update-cache — registers SVG
-    #      loader so it is actually used at runtime
-    # ----------------------------------------------------------
-    apt)
+    apt|chroot)
         UPD="apt update -y && apt upgrade -y"
         EXTRA="dbus-x11 xauth fonts-noto librsvg2-common adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
@@ -258,16 +286,6 @@ case $PKG_TYPE in
         APPEAR_CMD="apt install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
-    # ----------------------------------------------------------
-    # PACMAN — Arch, Artix, Manjaro
-    #
-    # FIX: librsvg          — SVG loader (Papirus uses SVG icons!)
-    #      adwaita-icon-theme — libwnck fallback icon "image-missing"
-    #      gdk-pixbuf-query-loaders --update-cache — without this
-    #      even after installing librsvg the loader is not registered
-    #      and all GTK apps crash with the Wnck assertion error
-    # pypanel is AUR only — replaced with tint2 (official extra repo)
-    # ----------------------------------------------------------
     pacman)
         UPD="pacman -Syu --noconfirm"
         EXTRA="dbus xorg-xauth noto-fonts librsvg adwaita-icon-theme"
@@ -294,16 +312,6 @@ case $PKG_TYPE in
         APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache"
         ;;
 
-    # ----------------------------------------------------------
-    # DNF — Fedora, AlmaLinux, Oracle, Rocky
-    #
-    # FIX: librsvg2         — SVG loader
-    #      adwaita-icon-theme — libwnck fallback icons
-    #      gdk-pixbuf-query-loaders-64 on Fedora (64-bit binary)
-    #      with fallback to gdk-pixbuf-query-loaders
-    # tint2 removed from Fedora 40+ — replaced with xfce4-panel
-    # mate-session-manager listed explicitly (not in @mate-desktop)
-    # ----------------------------------------------------------
     dnf)
         UPD="dnf update -y"
         EXTRA="dbus-x11 xauth google-noto-fonts-common librsvg2 adwaita-icon-theme"
@@ -330,17 +338,6 @@ case $PKG_TYPE in
         APPEAR_CMD="dnf install -y $APPEAR_PKGS && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
         ;;
 
-    # ----------------------------------------------------------
-    # APK — Alpine, Chimera, Adelie
-    #
-    # FIX: librsvg          — SVG loader
-    #      adwaita-icon-theme — libwnck fallback icons
-    #      gdk-pixbuf-query-loaders --update-cache
-    # openbox-session NOT available on Alpine — use openbox directly
-    # lxqt-session must be listed separately (not in lxqt meta)
-    # MATE: no meta package on Alpine, components listed explicitly
-    # lxappearance in testing repo — fallback added automatically
-    # ----------------------------------------------------------
     apk)
         UPD="apk update && apk upgrade"
         EXTRA="dbus-x11 xauth font-noto librsvg adwaita-icon-theme"
@@ -371,14 +368,6 @@ case $PKG_TYPE in
             gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
-    # ----------------------------------------------------------
-    # XBPS — Void Linux
-    #
-    # FIX: librsvg          — SVG loader
-    #      adwaita-icon-theme — libwnck fallback icons
-    #      gdk-pixbuf-query-loaders --update-cache
-    # font-ubuntu-ttf correct name (NOT font-ubuntu)
-    # ----------------------------------------------------------
     xbps)
         UPD="xbps-install -Suy"
         EXTRA="dbus-x11 xauth noto-fonts-ttf librsvg adwaita-icon-theme"
@@ -405,16 +394,6 @@ case $PKG_TYPE in
         APPEAR_CMD="xbps-install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
-    # ----------------------------------------------------------
-    # ZYPPER — OpenSUSE
-    #
-    # FIX: librsvg2         — SVG loader
-    #      adwaita-icon-theme — libwnck fallback icons
-    #      gdk-pixbuf-query-loaders --update-cache
-    # metatheme-arc-common correct name (arc-gtk-theme is OBS only)
-    # google-noto-coloremoji-fonts correct OpenSUSE name
-    # tint2 no official pkg on OpenSUSE — replaced with lxpanel
-    # ----------------------------------------------------------
     zypper)
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
         EXTRA="dbus-1-x11 xauth google-noto-fonts librsvg2 adwaita-icon-theme"
@@ -451,6 +430,33 @@ echo -e "${Y}    (This may take several minutes...)${NC}"
 
 if [ "$PKG_TYPE" = "pkg" ]; then
     bash -c "$INSTALL_CMD"
+elif [ "$PKG_TYPE" = "chroot" ]; then
+    CHROOT_INSTALL_SCRIPT="$NH_ROOTFS_DIR/tmp/install-desktop.sh"
+    mkdir -p "$NH_ROOTFS_DIR/tmp"
+    cat > "$CHROOT_INSTALL_SCRIPT" <<EOF
+#!/bin/bash
+set -e
+$INSTALL_CMD
+EOF
+    chmod +x "$CHROOT_INSTALL_SCRIPT"
+
+    if command -v tsu >/dev/null 2>&1; then
+        tsu -c "mount -t proc proc '$NH_ROOTFS_DIR'/proc || true && mount -t sysfs sys '$NH_ROOTFS_DIR'/sys || true && mount --bind /dev '$NH_ROOTFS_DIR'/dev || true && chroot '$NH_ROOTFS_DIR' /bin/bash /tmp/install-desktop.sh; RET=\$?; umount '$NH_ROOTFS_DIR'/proc || true; umount '$NH_ROOTFS_DIR'/sys || true; umount -l '$NH_ROOTFS_DIR'/dev || true; exit \$RET"
+    elif [ "$(id -u)" = "0" ]; then
+        mount -t proc proc "$NH_ROOTFS_DIR"/proc || true
+        mount -t sysfs sys "$NH_ROOTFS_DIR"/sys || true
+        mount --bind /dev "$NH_ROOTFS_DIR"/dev || true
+        chroot "$NH_ROOTFS_DIR" /bin/bash /tmp/install-desktop.sh
+        RET=$?
+        umount "$NH_ROOTFS_DIR"/proc || true
+        umount "$NH_ROOTFS_DIR"/sys || true
+        umount -l "$NH_ROOTFS_DIR"/dev || true
+        exit $RET
+    else
+        echo -e "${R}Root privileges are required to install Kali NetHunter Chroot desktop packages.${NC}"
+        echo -e "${R}Use tsu or run this script as root.${NC}"
+        exit 1
+    fi
 else
     proot-distro login "$DISTRO" -- bash -c "$INSTALL_CMD"
 fi
@@ -482,6 +488,32 @@ if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
     echo -e "${Y}--- [4/5] Installing appearance packages ---${NC}"
     if [ "$PKG_TYPE" = "pkg" ]; then
         bash -c "$APPEAR_CMD"
+    elif [ "$PKG_TYPE" = "chroot" ]; then
+        CHROOT_APPEAR_SCRIPT="$NH_ROOTFS_DIR/tmp/install-appearance.sh"
+        mkdir -p "$NH_ROOTFS_DIR/tmp"
+        cat > "$CHROOT_APPEAR_SCRIPT" <<EOF
+#!/bin/bash
+set -e
+$APPEAR_CMD
+EOF
+        chmod +x "$CHROOT_APPEAR_SCRIPT"
+        if command -v tsu >/dev/null 2>&1; then
+            tsu -c "mount -t proc proc '$NH_ROOTFS_DIR'/proc || true && mount -t sysfs sys '$NH_ROOTFS_DIR'/sys || true && mount --bind /dev '$NH_ROOTFS_DIR'/dev || true && chroot '$NH_ROOTFS_DIR' /bin/bash /tmp/install-appearance.sh; RET=\$?; umount '$NH_ROOTFS_DIR'/proc || true; umount '$NH_ROOTFS_DIR'/sys || true; umount -l '$NH_ROOTFS_DIR'/dev || true; exit \$RET"
+        elif [ "$(id -u)" = "0" ]; then
+            mount -t proc proc "$NH_ROOTFS_DIR"/proc || true
+            mount -t sysfs sys "$NH_ROOTFS_DIR"/sys || true
+            mount --bind /dev "$NH_ROOTFS_DIR"/dev || true
+            chroot "$NH_ROOTFS_DIR" /bin/bash /tmp/install-appearance.sh
+            RET=$?
+            umount "$NH_ROOTFS_DIR"/proc || true
+            umount "$NH_ROOTFS_DIR"/sys || true
+            umount -l "$NH_ROOTFS_DIR"/dev || true
+            exit $RET
+        else
+            echo -e "${R}Root privileges are required to install appearance packages in Kali NetHunter Chroot.${NC}"
+            echo -e "${R}Use tsu or run this script as root.${NC}"
+            exit 1
+        fi
     else
         proot-distro login "$DISTRO" -- bash -c "$APPEAR_CMD"
     fi
@@ -495,10 +527,6 @@ sleep 1
 
 # ==============================================================
 # STEP 5 — Extra autostart for Fluxbox / Openbox
-#
-# Openbox: copy default config files from /etc/xdg/openbox/ FIRST.
-# Without rc.xml and menu.xml, openbox-session crashes immediately.
-# tint2 is used as panel (pypanel is abandoned).
 # ==============================================================
 FLUXBOX_INIT=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
@@ -542,9 +570,7 @@ pkill -f virgl_test_server   2>/dev/null
 sleep 1
 
 echo -e "\${Y}Starting PulseAudio...\${NC}"
-pulseaudio --start \
-  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
-  --exit-idle-time=-1
+pulseaudio --start   --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"   --exit-idle-time=-1
 sleep 1
 
 echo -e "\${Y}Starting VirGL acceleration...\${NC}"
@@ -573,6 +599,67 @@ pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
+# ---- chroot launcher ----
+elif [ "$PKG_TYPE" = "chroot" ]; then
+
+cat > ~/start.sh << STARTSCRIPT
+#!/data/data/com.termux/files/usr/bin/bash
+# Kali NetHunter Chroot + $DE_NAME — Termux-X11
+R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
+NH_ROOTFS_DIR="/data/local/nh-system"
+
+echo -e "\${C}╔══════════════════════════════════════════════╗\${NC}"
+echo -e "\${C}║  Kali NetHunter Chroot / $DE_NAME  \${NC}"
+echo -e "\${C}╚══════════════════════════════════════════════╝\${NC}"
+
+echo -e "\${Y}Stopping old sessions...\${NC}"
+kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
+pkill -f virgl_test_server 2>/dev/null
+sleep 1
+
+echo -e "\${Y}Starting PulseAudio...\${NC}"
+pulseaudio --start   --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"   --exit-idle-time=-1
+sleep 1
+
+echo -e "\${Y}Starting VirGL acceleration...\${NC}"
+virgl_test_server_android &
+VIRGL_PID=\$!
+sleep 1
+
+echo -e "\${Y}Starting Termux-X11 server on :1 ...\${NC}"
+export XDG_RUNTIME_DIR=\${TMPDIR}
+export PULSE_SERVER=127.0.0.1
+export DISPLAY=:1
+export GALLIUM_DRIVER=virpipe
+export MESA_GL_VERSION_OVERRIDE=4.0
+termux-x11 :1 >/dev/null &
+sleep 3
+
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+sleep 1
+
+echo -e "\${G}Launching Kali NetHunter GUI...\${NC}"
+
+if command -v tsu >/dev/null 2>&1; then
+    tsu -c "mount -t proc proc \$NH_ROOTFS_DIR/proc || true && mount -t sysfs sys \$NH_ROOTFS_DIR/sys || true && mount --bind /dev \$NH_ROOTFS_DIR/dev || true && chroot \$NH_ROOTFS_DIR /bin/bash -lc 'export DISPLAY=:1 PULSE_SERVER=127.0.0.1 && if command -v kex >/dev/null 2>&1; then kex start; else $DE_START; fi'"
+elif [ "\$(id -u)" = "0" ]; then
+    mount -t proc proc "\$NH_ROOTFS_DIR"/proc || true
+    mount -t sysfs sys "\$NH_ROOTFS_DIR"/sys || true
+    mount --bind /dev "\$NH_ROOTFS_DIR"/dev || true
+    chroot "\$NH_ROOTFS_DIR" /bin/bash -lc "export DISPLAY=:1 PULSE_SERVER=127.0.0.1 && if command -v kex >/dev/null 2>&1; then kex start; else $DE_START; fi"
+else
+    echo -e "\${R}Root privileges are required to launch Kali NetHunter Chroot GUI.\${NC}"
+    echo -e "\${R}Use tsu or run this script as root.\${NC}"
+    exit 1
+fi
+
+echo -e "\${Y}Session ended. Cleaning up...\${NC}"
+kill \$VIRGL_PID 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
+echo -e "\${G}Done.\${NC}"
+STARTSCRIPT
+
 # ---- proot-distro launcher ----
 else
 
@@ -592,9 +679,7 @@ pkill -f virgl_test_server   2>/dev/null
 sleep 1
 
 echo -e "\${Y}Starting PulseAudio...\${NC}"
-pulseaudio --start \
-  --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" \
-  --exit-idle-time=-1
+pulseaudio --start   --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1"   --exit-idle-time=-1
 sleep 1
 
 echo -e "\${Y}Starting VirGL acceleration...\${NC}"
@@ -618,7 +703,7 @@ proot-distro login $DISTRO --shared-tmp -- bash -c "
   export GALLIUM_DRIVER=virpipe
   export MESA_GL_VERSION_OVERRIDE=4.0
   export XDG_RUNTIME_DIR=/tmp/runtime-root
-  mkdir -p \\\$XDG_RUNTIME_DIR && chmod 700 \\\$XDG_RUNTIME_DIR
+  mkdir -p \$XDG_RUNTIME_DIR && chmod 700 \$XDG_RUNTIME_DIR
   $FLUXBOX_INIT
   $OPENBOX_INIT
   $DE_START
