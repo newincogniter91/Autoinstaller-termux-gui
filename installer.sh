@@ -1,13 +1,19 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v2.9
+#  TERMUX-X11 FULL SETUP SCRIPT v3.2
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  Mode 0 — proot         : No root required. All 18 distros.
-#                           Uses proot-distro (standard)
-#  Mode 1 — chroot-distro : Root required. Native performance.
-#                           Uses chroot-distro tool.
+#                           Uses proot-distro.
+#  Mode 1 — chroot-distro : Root required.
+#                           Installed via pip as specified:
+#                             pkg install coreutils sudo python mount-utils -y
+#                             pip install chroot-distro
+#                             tsu
+#                             chroot-distro download <distro>
+#                             chroot-distro install <distro>
+#                             chroot-distro login <distro>
 #
 #  DE/WM: XFCE4, LXQt, MATE(*), Fluxbox, Openbox
 #  (*) MATE not available on Native Termux
@@ -24,8 +30,8 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v2.9       ║"
-    echo "║      proot · chroot-distro  —  TX11         ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.2       ║"
+    echo "║     proot · chroot-distro  —  TX11          ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -42,90 +48,6 @@ check_root() {
         exit 1
     fi
     echo -e "${G}✓ Root access confirmed.${NC}"
-}
-
-# ==============================================================
-# CHROOT-DISTRO HELPERS
-# ==============================================================
-CHROOT_DIR=""
-
-mount_chroot() {
-    [ -z "$CHROOT_DIR" ] && return
-    su -c "
-        mountpoint -q '$CHROOT_DIR/proc'    || mount -t proc  proc    '$CHROOT_DIR/proc'
-        mountpoint -q '$CHROOT_DIR/sys'     || mount --bind   /sys    '$CHROOT_DIR/sys'
-        mountpoint -q '$CHROOT_DIR/dev'     || mount --bind   /dev    '$CHROOT_DIR/dev'
-        mountpoint -q '$CHROOT_DIR/dev/pts' || mount -t devpts devpts '$CHROOT_DIR/dev/pts'
-        cp /etc/resolv.conf '$CHROOT_DIR/etc/resolv.conf' 2>/dev/null || true
-    "
-}
-
-umount_chroot() {
-    [ -z "$CHROOT_DIR" ] && return
-    su -c "
-        umount '$CHROOT_DIR/dev/pts' 2>/dev/null || true
-        umount '$CHROOT_DIR/dev'     2>/dev/null || true
-        umount '$CHROOT_DIR/proc'    2>/dev/null || true
-        umount '$CHROOT_DIR/sys'     2>/dev/null || true
-    "
-}
-
-# Detect usable shell inside chroot (bash preferred, sh fallback)
-detect_shell() {
-    if su -c "test -x '$CHROOT_DIR/bin/bash'" 2>/dev/null; then
-        echo "/bin/bash"
-    elif su -c "test -x '$CHROOT_DIR/usr/bin/bash'" 2>/dev/null; then
-        echo "/usr/bin/bash"
-    else
-        echo "/bin/sh"
-    fi
-}
-
-# Extract rootfs and auto-fix structure if needed
-extract_rootfs() {
-    local FILE="$1"
-    local FMT="$2"  # gz or xz
-    local FLAG; [ "$FMT" = "xz" ] && FLAG="-xJf" || FLAG="-xzf"
-
-    echo -e "${Y}Extracting rootfs...${NC}"
-    su -c "tar $FLAG '$FILE' -C '$CHROOT_DIR' 2>/dev/null" || true
-
-    # If /bin/sh missing, tarball had a top-level dir — fix it
-    if ! su -c "test -e '$CHROOT_DIR/bin/sh' -o -e '$CHROOT_DIR/usr/bin/env'" 2>/dev/null; then
-        echo -e "${Y}Fixing rootfs directory structure...${NC}"
-        local SUBDIR
-        SUBDIR=$(ls "$CHROOT_DIR" 2>/dev/null | grep -v '^\.' | head -1)
-        if [ -n "$SUBDIR" ] && su -c "test -d '$CHROOT_DIR/$SUBDIR/bin'" 2>/dev/null; then
-            su -c "cp -a '$CHROOT_DIR/$SUBDIR/.' '$CHROOT_DIR/' && rm -rf '$CHROOT_DIR/$SUBDIR'"
-        else
-            su -c "rm -rf '$CHROOT_DIR'/* && tar $FLAG '$FILE' -C '$CHROOT_DIR' --strip-components=1 2>/dev/null" || true
-        fi
-    fi
-
-    rm -f "$FILE"
-
-    if ! su -c "test -e '$CHROOT_DIR/bin/sh' -o -e '$CHROOT_DIR/usr/bin/env'" 2>/dev/null; then
-        echo -e "${R}✗ Rootfs extraction failed! Check available disk space.${NC}"
-        exit 1
-    fi
-    echo -e "${G}✓ Rootfs extracted and verified.${NC}"
-}
-
-# Run a command inside the selected environment
-run_in_distro() {
-    local CMD="$1"
-    if [ "$PKG_TYPE" = "pkg" ]; then
-        bash -c "$CMD"
-    elif [ "$SETUP_TYPE" = "0" ]; then
-        proot-distro login "$DISTRO" -- bash -c "$CMD"
-    else
-        mount_chroot
-        su -c "mkdir -p '$CHROOT_DIR/tmp' && chmod 1777 '$CHROOT_DIR/tmp'"
-        printf '#!/bin/sh\n%s\n' "$CMD" > "${CHROOT_DIR}/tmp/.cmd.sh"
-        local SH; SH=$(detect_shell)
-        su -c "chroot '$CHROOT_DIR' $SH /tmp/.cmd.sh"
-        rm -f "${CHROOT_DIR}/tmp/.cmd.sh"
-    fi
 }
 
 # ==============================================================
@@ -162,15 +84,13 @@ echo    "║                                              ║"
 echo    "║  0) proot                                   ║"
 echo    "║     No root required.                       ║"
 echo    "║     Runs Linux via proot-distro.            ║"
-echo    "║     Works on any device, any Android.       ║"
+echo    "║     Works on any Android device.            ║"
 echo    "║     Recommended for everyday use.           ║"
 echo    "║                                              ║"
 echo    "║  1) chroot-distro                           ║"
-echo    "║     ⚠ Requires rooted device.               ║"
-echo    "║     Native kernel, better performance.      ║"
-echo    "║     Uses chroot-distro tool.                ║"
-echo    "║     Distros: Debian, Ubuntu, Alpine,        ║"
-echo    "║              Arch Linux ARM.                ║"
+echo    "║     ⚠ Requires ROOTED device.               ║"
+echo    "║     Installed via pip (chroot-distro pkg).  ║"
+echo    "║     Native kernel — better performance.     ║"
 echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
 read -p "Select mode (0-1): " SETUP_TYPE
@@ -255,97 +175,57 @@ if [ "$SETUP_TYPE" = "0" ]; then
         echo -e "${G}✓ Native Termux — no proot needed.${NC}"
     fi
 
-# ---- CHROOT-DISTRO ----
+# ---- CHROOT-DISTRO (installed exactly as specified) ----
 elif [ "$SETUP_TYPE" = "1" ]; then
 
     check_root
-    CHROOT_BASE="$HOME/chroot-distro"
 
-    # Install chroot-distro tool (and debootstrap for Debian)
-    echo -e "${Y}Installing chroot-distro and dependencies...${NC}"
-    pkg install -y debootstrap proot-distro
+    echo -e "${Y}--- [2/5] Installing chroot-distro ---${NC}"
+
+    echo -e "${Y}  Installing required packages...${NC}"
+    pkg update -y
+    pkg install coreutils sudo python mount-utils -y
+
+    echo -e "${Y}  Installing chroot-distro via pip...${NC}"
+    pip install chroot-distro
 
     banner
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║     SELECT CHROOT-DISTRO DISTRIBUTION        ║"
     echo    "╠══════════════════════════════════════════════╣"
     echo    "║                                              ║"
-    echo    "║   1) Debian 12 Bookworm  (Stable,  apt)     ║"
-    echo    "║   2) Ubuntu 24.04 LTS    (Popular, apt)     ║"
-    echo    "║   3) Alpine Linux        (Minimal, apk)     ║"
-    echo    "║   4) Arch Linux ARM      (Advanced,pacman)  ║"
+    echo    "║   1) Debian                                 ║"
+    echo    "║   2) Ubuntu                                 ║"
+    echo    "║   3) Alpine Linux                           ║"
+    echo    "║   4) Arch Linux                             ║"
+    echo    "║   5) Fedora                                 ║"
+    echo    "║   6) OpenSUSE                                ║"
+    echo    "║   7) Void Linux                              ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select a distro (1-4): " chroot_choice
+    read -p "Select a distro (1-7): " cd_choice
 
-    case $chroot_choice in
-        1) PKG_TYPE="apt";    DNAME="Debian 12";      CHROOT_DIR="$CHROOT_BASE/debian"  ;;
-        2) PKG_TYPE="apt";    DNAME="Ubuntu 24.04";   CHROOT_DIR="$CHROOT_BASE/ubuntu"  ;;
-        3) PKG_TYPE="apk";    DNAME="Alpine Linux";   CHROOT_DIR="$CHROOT_BASE/alpine"  ;;
-        4) PKG_TYPE="pacman"; DNAME="Arch Linux ARM"; CHROOT_DIR="$CHROOT_BASE/arch"    ;;
+    case $cd_choice in
+        1) DISTRO="debian";    PKG_TYPE="apt";    DNAME="Debian"       ;;
+        2) DISTRO="ubuntu";    PKG_TYPE="apt";    DNAME="Ubuntu"       ;;
+        3) DISTRO="alpine";    PKG_TYPE="apk";    DNAME="Alpine Linux" ;;
+        4) DISTRO="archlinux"; PKG_TYPE="pacman"; DNAME="Arch Linux"   ;;
+        5) DISTRO="fedora";    PKG_TYPE="dnf";    DNAME="Fedora"       ;;
+        6) DISTRO="opensuse";  PKG_TYPE="zypper"; DNAME="OpenSUSE"     ;;
+        7) DISTRO="void";      PKG_TYPE="xbps";   DNAME="Void Linux"   ;;
         *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
     esac
 
-    echo -e "${Y}--- [2/5] Setting up $DNAME via chroot-distro ---${NC}"
+    echo -e "${Y}--- [3/5] Setting up $DNAME via chroot-distro ---${NC}"
 
-    if [ -d "$CHROOT_DIR" ] && [ "$(ls -A "$CHROOT_DIR" 2>/dev/null)" ]; then
-        echo -e "${Y}⚠ $CHROOT_DIR already exists — reusing.${NC}"
-    else
-        mkdir -p "$CHROOT_DIR"
+    echo -e "${Y}  Getting root privileges (tsu)...${NC}"
+    echo -e "${Y}  Downloading rootfs for $DISTRO...${NC}"
+    tsu -c "chroot-distro download $DISTRO"
 
-        case $chroot_choice in
-            1) # Debian 12 via debootstrap
-                echo -e "${Y}Bootstrapping Debian 12 (this takes 10-15 min)...${NC}"
-                su -c "debootstrap --arch=arm64 bookworm '$CHROOT_DIR' https://deb.debian.org/debian"
-                ;;
-            2) # Ubuntu 24.04 base rootfs
-                echo -e "${Y}Downloading Ubuntu 24.04 arm64 base rootfs...${NC}"
-                wget -q --show-progress \
-                    "https://cdimage.ubuntu.com/ubuntu-base/releases/noble/release/ubuntu-base-24.04-base-arm64.tar.gz" \
-                    -O /tmp/rootfs.tar.gz
-                extract_rootfs /tmp/rootfs.tar.gz gz
-                ;;
-            3) # Alpine aarch64 minirootfs
-                echo -e "${Y}Downloading Alpine Linux aarch64 minirootfs...${NC}"
-                ALPINE_BASE="https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/aarch64"
-                ALPINE_VER=$(wget -qO- "$ALPINE_BASE/latest-releases.yaml" \
-                    | grep -A5 'minirootfs' | grep 'version:' | head -1 | awk '{print $2}')
-                [ -z "$ALPINE_VER" ] && ALPINE_VER="3.21.3"
-                wget -q --show-progress \
-                    "$ALPINE_BASE/alpine-minirootfs-${ALPINE_VER}-aarch64.tar.gz" \
-                    -O /tmp/rootfs.tar.gz
-                extract_rootfs /tmp/rootfs.tar.gz gz
-                ;;
-            4) # Arch Linux ARM aarch64
-                echo -e "${Y}Downloading Arch Linux ARM aarch64 rootfs...${NC}"
-                wget -q --show-progress \
-                    "http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz" \
-                    -O /tmp/rootfs.tar.gz
-                extract_rootfs /tmp/rootfs.tar.gz gz
-                ;;
-        esac
+    echo -e "${Y}  Installing $DISTRO...${NC}"
+    tsu -c "chroot-distro install $DISTRO"
 
-        # Common post-extract setup
-        su -c "
-            mkdir -p '$CHROOT_DIR/proc' '$CHROOT_DIR/sys' '$CHROOT_DIR/dev' '$CHROOT_DIR/dev/pts'
-            mkdir -p '$CHROOT_DIR/tmp'  && chmod 1777 '$CHROOT_DIR/tmp'
-            cp /etc/resolv.conf '$CHROOT_DIR/etc/resolv.conf' 2>/dev/null || true
-        "
-
-        # Initialize package manager inside chroot
-        local SH; SH=$(detect_shell)
-        echo -e "${Y}Initializing package manager (shell: $SH)...${NC}"
-        mount_chroot
-        case $chroot_choice in
-            1|2) su -c "chroot '$CHROOT_DIR' $SH -c 'apt update -y'" ;;
-            3)   su -c "chroot '$CHROOT_DIR' $SH -c 'apk update'"    ;;
-            4)   su -c "chroot '$CHROOT_DIR' $SH -c \
-                    'pacman-key --init && pacman-key --populate archlinuxarm && pacman -Syu --noconfirm'" ;;
-        esac
-        umount_chroot
-    fi
-
-    echo -e "${G}✓ $DNAME chroot-distro ready at $CHROOT_DIR${NC}"
+    echo -e "${G}✓ $DNAME installed via chroot-distro.${NC}"
 
 fi
 
@@ -394,18 +274,17 @@ else
 fi
 
 # ==============================================================
-# Package definitions — all modes, all distros
-# KEY FIXES:
-#  - librsvg* everywhere: prevents Wnck SVG icon crash (signal 6)
-#  - adwaita-icon-theme: libwnck needs "image-missing" fallback
+# Package definitions per package manager + DE
+# KEY FIXES kept from previous versions:
+#  - librsvg* everywhere (SVG icon crash / Wnck signal 6)
+#  - adwaita-icon-theme (libwnck fallback icon)
 #  - gdk-pixbuf-query-loaders --update-cache after every install
-#  - pypanel → tint2 (pypanel abandoned, AUR-only on Arch)
-#  - openbox-session on all except Alpine (uses openbox directly)
-#  - Openbox configs copied from /etc/xdg/openbox/ on first run
+#  - pypanel → tint2 (pypanel abandoned / AUR-only on Arch)
+#  - openbox: copy /etc/xdg/openbox/ configs before launching
 # ==============================================================
 case $PKG_TYPE in
 
-    pkg) # Native Termux (x11-repo)
+    pkg) # Native Termux
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
         case $de_choice in
             1) DE_PKGS="xfce4 xfce4-goodies dbus"
@@ -451,7 +330,7 @@ case $PKG_TYPE in
         APPEAR_CMD="apt install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
-    pacman) # Arch, Artix, Manjaro (proot) + Arch ARM (chroot-distro)
+    pacman) # Arch, Artix, Manjaro
         UPD="pacman -Syu --noconfirm"
         EXTRA="dbus xorg-xauth noto-fonts librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
@@ -477,7 +356,7 @@ case $PKG_TYPE in
         APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache"
         ;;
 
-    dnf) # Fedora, AlmaLinux, Oracle, Rocky (proot only)
+    dnf) # Fedora, AlmaLinux, Oracle, Rocky
         UPD="dnf update -y"
         EXTRA="dbus-x11 xauth google-noto-fonts-common librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
@@ -503,7 +382,7 @@ case $PKG_TYPE in
         APPEAR_CMD="dnf install -y $APPEAR_PKGS && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
         ;;
 
-    apk) # Alpine, Chimera, Adelie (proot) + Alpine (chroot-distro)
+    apk) # Alpine, Chimera, Adelie
         UPD="apk update && apk upgrade"
         EXTRA="dbus-x11 xauth font-noto librsvg adwaita-icon-theme"
         APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
@@ -529,7 +408,7 @@ case $PKG_TYPE in
         APPEAR_CMD="$UPD && apk add $APPEAR_PKGS && (apk add lxappearance 2>/dev/null || (echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && apk update && apk add lxappearance@testing)) && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
-    xbps) # Void Linux (proot only)
+    xbps) # Void Linux
         UPD="xbps-install -Suy"
         EXTRA="dbus-x11 xauth noto-fonts-ttf librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
@@ -555,7 +434,7 @@ case $PKG_TYPE in
         APPEAR_CMD="xbps-install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 
-    zypper) # OpenSUSE (proot only)
+    zypper) # OpenSUSE
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
         EXTRA="dbus-1-x11 xauth google-noto-fonts librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
@@ -586,11 +465,16 @@ esac
 # STEP 4 — Install DE
 # ==============================================================
 echo -e "${G}✓ Selected: $DE_NAME${NC}"
-echo -e "${Y}--- [3/5] Installing $DE_NAME in $DNAME ---${NC}"
+echo -e "${Y}--- [4/5] Installing $DE_NAME in $DNAME ---${NC}"
 echo -e "${Y}    (This may take several minutes...)${NC}"
 
-run_in_distro "$INSTALL_CMD"
-[ "$SETUP_TYPE" = "1" ] && umount_chroot
+if [ "$PKG_TYPE" = "pkg" ]; then
+    bash -c "$INSTALL_CMD"
+elif [ "$SETUP_TYPE" = "0" ]; then
+    proot-distro login "$DISTRO" -- bash -c "$INSTALL_CMD"
+else
+    tsu -c "chroot-distro login $DISTRO -- /bin/sh -c \"$INSTALL_CMD\""
+fi
 
 echo -e "${G}✓ $DE_NAME installed.${NC}"
 sleep 1
@@ -616,9 +500,14 @@ read -p "$(echo -e "${Y}")Install recommended appearance packages? [Y/n]: $(echo
 appear_choice="${appear_choice:-Y}"
 
 if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
-    echo -e "${Y}--- [4/5] Installing appearance packages ---${NC}"
-    run_in_distro "$APPEAR_CMD"
-    [ "$SETUP_TYPE" = "1" ] && umount_chroot
+    echo -e "${Y}--- [5/5] Installing appearance packages ---${NC}"
+    if [ "$PKG_TYPE" = "pkg" ]; then
+        bash -c "$APPEAR_CMD"
+    elif [ "$SETUP_TYPE" = "0" ]; then
+        proot-distro login "$DISTRO" -- bash -c "$APPEAR_CMD"
+    else
+        tsu -c "chroot-distro login $DISTRO -- /bin/sh -c \"$APPEAR_CMD\""
+    fi
     APPEAR_INSTALLED=true
     echo -e "${G}✓ Appearance packages installed.${NC}"
 else
@@ -628,7 +517,7 @@ fi
 sleep 1
 
 # ==============================================================
-# Fluxbox / Openbox init strings (embedded into start.sh)
+# Openbox / Fluxbox init (embedded in start.sh)
 # ==============================================================
 FLUXBOX_INIT=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
@@ -647,17 +536,17 @@ fi
 # ==============================================================
 # STEP 6 — Generate ~/start.sh
 # ==============================================================
-echo -e "${Y}--- [5/5] Creating ~/start.sh launcher ---${NC}"
+echo -e "${Y}--- Creating ~/start.sh launcher ---${NC}"
 
 # ---- Native Termux ----
 if [ "$PKG_TYPE" = "pkg" ]; then
 
-cat > ~/start.sh << STARTSCRIPT
+cat > ~/start.sh << 'STARTEOF'
 #!/data/data/com.termux/files/usr/bin/bash
+STARTEOF
+cat >> ~/start.sh << STARTSCRIPT
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
-echo -e "\${C}╔══════════════════════════╗\${NC}"
-echo -e "\${C}║  Native Termux + $DE_NAME  \${NC}"
-echo -e "\${C}╚══════════════════════════╝\${NC}"
+echo -e "\${C}[ Native Termux + $DE_NAME ]\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
 pkill -f pulseaudio 2>/dev/null; pkill -f virgl_test_server 2>/dev/null; sleep 1
 pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1; sleep 1
@@ -679,12 +568,12 @@ STARTSCRIPT
 # ---- proot ----
 elif [ "$SETUP_TYPE" = "0" ]; then
 
-cat > ~/start.sh << STARTSCRIPT
+cat > ~/start.sh << 'STARTEOF'
 #!/data/data/com.termux/files/usr/bin/bash
+STARTEOF
+cat >> ~/start.sh << STARTSCRIPT
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
-echo -e "\${C}╔══════════════════════════╗\${NC}"
-echo -e "\${C}║  $DNAME proot + $DE_NAME  \${NC}"
-echo -e "\${C}╚══════════════════════════╝\${NC}"
+echo -e "\${C}[ $DNAME proot + $DE_NAME ]\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
 pkill -f pulseaudio 2>/dev/null; pkill -f virgl_test_server 2>/dev/null; sleep 1
 pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1; sleep 1
@@ -711,68 +600,37 @@ STARTSCRIPT
 # ---- chroot-distro ----
 else
 
-cat > ~/start.sh << STARTSCRIPT
+cat > ~/start.sh << 'STARTEOF'
 #!/data/data/com.termux/files/usr/bin/bash
+STARTEOF
+cat >> ~/start.sh << STARTSCRIPT
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
-
-CHROOT_DIR="$CHROOT_DIR"
-
-echo -e "\${C}╔══════════════════════════╗\${NC}"
-echo -e "\${C}║  $DNAME chroot + $DE_NAME  \${NC}"
-echo -e "\${C}╚══════════════════════════╝\${NC}"
+echo -e "\${C}[ $DNAME chroot-distro + $DE_NAME ]\${NC}"
 
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
 pkill -f pulseaudio 2>/dev/null; pkill -f virgl_test_server 2>/dev/null; sleep 1
 pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1; sleep 1
 virgl_test_server_android & VIRGL_PID=\$!; sleep 1
 
-su -c "
-  mountpoint -q '\${CHROOT_DIR}/proc'    || mount -t proc  proc    '\${CHROOT_DIR}/proc'
-  mountpoint -q '\${CHROOT_DIR}/sys'     || mount --bind   /sys    '\${CHROOT_DIR}/sys'
-  mountpoint -q '\${CHROOT_DIR}/dev'     || mount --bind   /dev    '\${CHROOT_DIR}/dev'
-  mountpoint -q '\${CHROOT_DIR}/dev/pts' || mount -t devpts devpts '\${CHROOT_DIR}/dev/pts'
-  cp /etc/resolv.conf '\${CHROOT_DIR}/etc/resolv.conf' 2>/dev/null || true
-"
-
 export XDG_RUNTIME_DIR=\${TMPDIR}
 termux-x11 :0 >/dev/null &
 sleep 3
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; sleep 1
 
-# Detect shell (bash preferred, sh fallback)
-if su -c "test -x '\${CHROOT_DIR}/bin/bash'" 2>/dev/null; then
-    CSHELL="/bin/bash"
-elif su -c "test -x '\${CHROOT_DIR}/usr/bin/bash'" 2>/dev/null; then
-    CSHELL="/usr/bin/bash"
-else
-    CSHELL="/bin/sh"
-fi
+echo -e "\${G}Launching $DE_NAME in $DNAME (chroot-distro)...\${NC}"
 
-# Write DE startup into chroot /tmp (avoids nested quoting issues)
-cat > "\${CHROOT_DIR}/tmp/.start_de.sh" << 'DESTART'
-#!/bin/sh
-export DISPLAY=:0
-export PULSE_SERVER=127.0.0.1
-export GALLIUM_DRIVER=virpipe
-export MESA_GL_VERSION_OVERRIDE=4.0
-export XDG_RUNTIME_DIR=/tmp/runtime-root
-mkdir -p \$XDG_RUNTIME_DIR && chmod 700 \$XDG_RUNTIME_DIR
-$FLUXBOX_INIT
-$OPENBOX_INIT
-$DE_START
-DESTART
-chmod +x "\${CHROOT_DIR}/tmp/.start_de.sh"
+tsu -c "chroot-distro login $DISTRO -- /bin/sh -c '
+  export DISPLAY=:0
+  export PULSE_SERVER=127.0.0.1
+  export GALLIUM_DRIVER=virpipe
+  export MESA_GL_VERSION_OVERRIDE=4.0
+  export XDG_RUNTIME_DIR=/tmp/runtime-chroot
+  mkdir -p \\\$XDG_RUNTIME_DIR && chmod 700 \\\$XDG_RUNTIME_DIR
+  $FLUXBOX_INIT
+  $OPENBOX_INIT
+  $DE_START
+'"
 
-echo -e "\${G}Launching $DE_NAME ($DNAME chroot-distro)...\${NC}"
-su -c "chroot '\${CHROOT_DIR}' \${CSHELL} /tmp/.start_de.sh"
-rm -f "\${CHROOT_DIR}/tmp/.start_de.sh"
-
-su -c "
-  umount '\${CHROOT_DIR}/dev/pts' 2>/dev/null || true
-  umount '\${CHROOT_DIR}/dev'     2>/dev/null || true
-  umount '\${CHROOT_DIR}/proc'    2>/dev/null || true
-  umount '\${CHROOT_DIR}/sys'     2>/dev/null || true
-"
 kill \$VIRGL_PID 2>/dev/null; pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
@@ -789,7 +647,11 @@ echo -e "${G}"
 echo "╔══════════════════════════════════════════════╗"
 echo "║            ✓  SETUP COMPLETE!               ║"
 echo "╠══════════════════════════════════════════════╣"
-echo "║  Mode    : $([ "$SETUP_TYPE" = "0" ] && echo "proot" || echo "chroot-distro")"
+if [ "$SETUP_TYPE" = "0" ]; then
+echo "║  Mode    : proot"
+else
+echo "║  Mode    : chroot-distro"
+fi
 echo "║  Distro  : $DNAME"
 echo "║  Desktop : $DE_NAME"
 echo "║  Display : Termux-X11"
