@@ -220,21 +220,18 @@ elif [ "$SETUP_TYPE" = "1" ]; then
     echo -e "${Y}--- [3/5] Setting up $DNAME via chroot-distro ---${NC}"
 
     echo -e "${Y}  Downloading rootfs for $DISTRO (as root)...${NC}"
-    su -c "HOME=/data/data/com.termux/files/home /data/data/com.termux/files/usr/bin/chroot-distro download $DISTRO"
+    su -c "/data/data/com.termux/files/usr/bin/chroot-distro download $DISTRO"
 
     echo -e "${Y}  Installing $DISTRO (as root)...${NC}"
-    su -c "HOME=/data/data/com.termux/files/home /data/data/com.termux/files/usr/bin/chroot-distro install $DISTRO"
+    su -c "/data/data/com.termux/files/usr/bin/chroot-distro install $DISTRO"
 
-    # Verify the container list pointing to the correct home directory
+    # Controllo brutale ma infallibile: se la cartella esiste, l'installazione è andata.
     echo -e "${Y}  Verifying installation...${NC}"
-    if ! su -c "HOME=/data/data/com.termux/files/home /data/data/com.termux/files/usr/bin/chroot-distro list" 2>/dev/null | grep -qi "$DISTRO_LOGIN"; then
-        # Fallback bypass: if the directory exists, it is installed anyway
-        if [ -d "/data/data/com.termux/files/usr/var/lib/chroot-distro/containers/$DISTRO_LOGIN" ] || [ -d "/data/data/com.termux/files/home/.local/share/chroot-distro/$DISTRO_LOGIN" ]; then
-            echo -e "${Y}⚠ List check misbehaved, but container directory found. Proceeding...${NC}"
-        else
-            echo -e "${R}✗ Verification failed. Container not detected.${NC}"
-            exit 1
-        fi
+    if [ -d "/data/data/com.termux/files/usr/var/lib/chroot-distro/containers/$DISTRO_LOGIN" ] || su -c "[ -d /var/lib/chroot-distro/containers/$DISTRO_LOGIN ]" 2>/dev/null; then
+        echo -e "${G}✓ $DNAME directory verified.${NC}"
+    else
+        echo -e "${R}✗ Installation failed — Container directory not found.${NC}"
+        exit 1
     fi
 
     echo -e "${G}✓ $DNAME installed and verified via chroot-distro.${NC}"
