@@ -30,9 +30,9 @@ Pick a distro, pick a desktop environment, optionally install a set of matching 
 ## 🚀 Quick Start
 
 ```bash
-curl -O https://raw.githubusercontent.com/<your-username>/<your-repo>/main/setup-termux-x11.sh
-chmod +x setup-termux-x11.sh
-./setup-termux-x11.sh
+curl -O https://raw.githubusercontent.com/newincogniter91/Autoinstaller-termux-gui/main/installer.sh
+chmod +x installer.sh
+./installer.sh
 ```
 
 The script will:
