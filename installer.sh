@@ -625,7 +625,10 @@ else
 # Build the inner DE-launch command as a plain string first,
 # then embed it with single quotes in the su -c call.
 # This avoids nested double-quote / heredoc conflicts entirely.
-DE_INNER_CMD="export DISPLAY=:0; export PULSE_SERVER=127.0.0.1; export GALLIUM_DRIVER=virpipe; export MESA_GL_VERSION_OVERRIDE=4.0; export XDG_RUNTIME_DIR=/tmp/runtime-chroot; mkdir -p \$XDG_RUNTIME_DIR; chmod 700 \$XDG_RUNTIME_DIR; ${FLUXBOX_INIT}; ${OPENBOX_INIT}; ${DE_START}"
+DE_INNER_CMD="export DISPLAY=:0; export PULSE_SERVER=127.0.0.1; export GALLIUM_DRIVER=virpipe; export MESA_GL_VERSION_OVERRIDE=4.0; export XDG_RUNTIME_DIR=/tmp/runtime-chroot; mkdir -p \$XDG_RUNTIME_DIR; chmod 700 \$XDG_RUNTIME_DIR"
+[ -n "$FLUXBOX_INIT" ] && DE_INNER_CMD="$DE_INNER_CMD; $FLUXBOX_INIT"
+[ -n "$OPENBOX_INIT" ] && DE_INNER_CMD="$DE_INNER_CMD; $OPENBOX_INIT"
+DE_INNER_CMD="$DE_INNER_CMD; $DE_START"
 
 cat > ~/start.sh << STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
