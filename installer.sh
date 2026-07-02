@@ -1,21 +1,11 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v3.3
+#  TERMUX-X11 FULL SETUP SCRIPT v3.4
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  Mode 0 — proot         : No root required. All 18 distros.
-#                           Uses proot-distro.
 #  Mode 1 — chroot-distro : Root required.
-#                             pkg install coreutils sudo python mount-utils -y
-#                             pip install chroot-distro
-#                             su -c "chroot-distro download <distro>"
-#                             su -c "chroot-distro install <distro>"
-#                             su -c "chroot-distro login <distro>"
-#
-#  DE/WM: XFCE4, LXQt, MATE(*), Fluxbox, Openbox
-#  (*) MATE not available on Native Termux
-#  Display: Termux-X11 ONLY
 # ==============================================================
 
 R='\033[0;31m'
@@ -28,67 +18,43 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.3       ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.4       ║"
     echo "║     proot · chroot-distro  —  TX11          ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
 
-# ==============================================================
-# ROOT CHECK
-# ==============================================================
 check_root() {
     echo -e "${Y}Checking root access...${NC}"
     if ! su -c "id" 2>/dev/null | grep -q "uid=0"; then
         echo -e "${R}✗ Root access not available!${NC}"
-        echo -e "${Y}  chroot-distro requires a rooted device.${NC}"
-        echo -e "${Y}  Use proot (option 0) if not rooted.${NC}"
         exit 1
     fi
     echo -e "${G}✓ Root access confirmed.${NC}"
 }
 
-# ==============================================================
-# STEP 1 — Bootstrap Termux (fresh install safe)
-# NOTE: "termux-x11-repo", "x11-utils", "x11-fonts" do NOT exist
-# ==============================================================
 banner
 echo -e "${Y}--- [1/5] Bootstrapping Termux ---${NC}"
 export DEBIAN_FRONTEND=noninteractive
 
 echo -e "${Y}  Updating base Termux packages...${NC}"
 pkg update -y && pkg upgrade -y
-
-echo -e "${Y}  Adding x11-repo (provides termux-x11-nightly)...${NC}"
+echo -e "${Y}  Adding x11-repo...${NC}"
 pkg install -y x11-repo
-
-echo -e "${Y}  Re-reading package lists with x11-repo enabled...${NC}"
+echo -e "${Y}  Re-reading package lists...${NC}"
 pkg update -y
-
 echo -e "${Y}  Installing core runtime packages...${NC}"
 pkg install -y termux-x11-nightly pulseaudio virglrenderer-android wget curl bash
-
 echo -e "${G}✓ Termux bootstrap complete.${NC}"
 sleep 1
 
-# ==============================================================
-# STEP 2 — Setup mode selection
-# ==============================================================
 banner
 echo -e "${C}╔══════════════════════════════════════════════╗"
 echo    "║              SELECT SETUP MODE               ║"
 echo    "╠══════════════════════════════════════════════╣"
 echo    "║                                              ║"
-echo    "║  0) proot                                   ║"
-echo    "║     No root required.                       ║"
-echo    "║     Runs Linux via proot-distro.            ║"
-echo    "║     Works on any Android device.            ║"
-echo    "║     Recommended for everyday use.           ║"
-echo    "║                                              ║"
-echo    "║  1) chroot-distro                           ║"
-echo    "║     ⚠ Requires ROOTED device.               ║"
-echo    "║     Installed via pip (chroot-distro pkg).  ║"
-echo    "║     Native kernel — better performance.     ║"
+echo    "║  0) proot           (No root)               ║"
+echo    "║  1) chroot-distro   (Root required)         ║"
 echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
 read -p "Select mode (0-1): " SETUP_TYPE
@@ -98,48 +64,30 @@ case $SETUP_TYPE in
     *) echo -e "${R}Invalid choice. Exiting.${NC}"; exit 1 ;;
 esac
 
-# ==============================================================
-# STEP 2b — Distro selection
-# ==============================================================
-
-# ---- PROOT ----
 if [ "$SETUP_TYPE" = "0" ]; then
-
     pkg install -y proot-distro
-
     banner
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║          SELECT YOUR DISTRIBUTION            ║"
     echo    "╠══════════════════════════════════════════════╣"
-    echo    "║                                              ║"
-    echo    "║   0)  Native Termux (no proot, fastest!)    ║"
-    echo    "║       ⚠  MATE not available on Native       ║"
-    echo    "║                                              ║"
-    echo    "║   --- Debian/Ubuntu based ---                ║"
-    echo    "║   1)  Debian        (Stable, Recommended)   ║"
-    echo    "║   2)  Ubuntu 25.10  (Popular, Large repos)  ║"
-    echo    "║   3)  Trisquel GNU  (Free Debian-based)     ║"
-    echo    "║   4)  Pardus        (Turkish Debian-based)  ║"
-    echo    "║                                              ║"
-    echo    "║   --- Arch based ---                        ║"
-    echo    "║   5)  Arch Linux    (Advanced users)        ║"
-    echo    "║   6)  Artix Linux   (Arch, no systemd)      ║"
-    echo    "║   7)  Manjaro       (Arch, user-friendly)   ║"
-    echo    "║                                              ║"
-    echo    "║   --- RPM based ---                         ║"
-    echo    "║   8)  Fedora        (Modern, cutting-edge)  ║"
-    echo    "║   9)  AlmaLinux     (RHEL compatible)       ║"
-    echo    "║   10) Oracle Linux  (Enterprise RHEL)       ║"
-    echo    "║   11) Rocky Linux   (RHEL compatible)       ║"
-    echo    "║                                              ║"
-    echo    "║   --- Independent ---                       ║"
-    echo    "║   12) Alpine Linux  (Ultra minimal, musl)   ║"
-    echo    "║   13) Void Linux    (Runit, independent)    ║"
-    echo    "║   14) OpenSUSE      (YaST, rolling/stable)  ║"
-    echo    "║   15) Chimera Linux (musl/LLVM based)       ║"
-    echo    "║   16) Adelie Linux  (musl Alpine-like)      ║"
-    echo    "║   17) Deepin        (Beautiful Chinese DE)  ║"
-    echo    "║                                              ║"
+    echo    "║   0)  Native Termux                         ║"
+    echo    "║   1)  Debian                                ║"
+    echo    "║   2)  Ubuntu 25.10                          ║"
+    echo    "║   3)  Trisquel GNU                          ║"
+    echo    "║   4)  Pardus                                ║"
+    echo    "║   5)  Arch Linux                            ║"
+    echo    "║   6)  Artix Linux                           ║"
+    echo    "║   7)  Manjaro                               ║"
+    echo    "║   8)  Fedora                                ║"
+    echo    "║   9)  AlmaLinux                             ║"
+    echo    "║   10) Oracle Linux                          ║"
+    echo    "║   11) Rocky Linux                           ║"
+    echo    "║   12) Alpine Linux                          ║"
+    echo    "║   13) Void Linux                            ║"
+    echo    "║   14) OpenSUSE                              ║"
+    echo    "║   15) Chimera Linux                         ║"
+    echo    "║   16) Adelie Linux                          ║"
+    echo    "║   17) Deepin                                ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a distro (0-17): " distro_choice
 
@@ -173,25 +121,17 @@ if [ "$SETUP_TYPE" = "0" ]; then
         echo -e "${G}✓ Native Termux — no proot needed.${NC}"
     fi
 
-# ---- CHROOT-DISTRO ----
 elif [ "$SETUP_TYPE" = "1" ]; then
-
     check_root
-
     echo -e "${Y}--- [2/5] Installing chroot-distro ---${NC}"
-
-    echo -e "${Y}  Installing required packages...${NC}"
     pkg update -y
     pkg install coreutils sudo python mount-utils -y
-
-    echo -e "${Y}  Installing chroot-distro via pip...${NC}"
     pip install chroot-distro
 
     banner
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║     SELECT CHROOT-DISTRO DISTRIBUTION        ║"
     echo    "╠══════════════════════════════════════════════╣"
-    echo    "║                                              ║"
     echo    "║   1) debian                                 ║"
     echo    "║   2) ubuntu:25.10                           ║"
     echo    "║   3) alpine                                 ║"
@@ -199,7 +139,6 @@ elif [ "$SETUP_TYPE" = "1" ]; then
     echo    "║   5) fedora                                 ║"
     echo    "║   6) opensuse                               ║"
     echo    "║   7) void                                   ║"
-    echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a distro (1-7): " cd_choice
 
@@ -214,18 +153,12 @@ elif [ "$SETUP_TYPE" = "1" ]; then
         *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
     esac
 
-    # Login name used by chroot-distro (strips the :tag part, e.g. ubuntu:25.10 -> ubuntu)
     DISTRO_LOGIN="${DISTRO%%:*}"
 
     echo -e "${Y}--- [3/5] Setting up $DNAME via chroot-distro ---${NC}"
-
-    echo -e "${Y}  Downloading rootfs for $DISTRO (as root)...${NC}"
     su -c "/data/data/com.termux/files/usr/bin/chroot-distro download $DISTRO"
-
-    echo -e "${Y}  Installing $DISTRO (as root)...${NC}"
     su -c "/data/data/com.termux/files/usr/bin/chroot-distro install $DISTRO"
 
-    # Controllo brutale ma infallibile: se la cartella esiste, l'installazione è andata.
     echo -e "${Y}  Verifying installation...${NC}"
     if [ -d "/data/data/com.termux/files/usr/var/lib/chroot-distro/containers/$DISTRO_LOGIN" ] || su -c "[ -d /var/lib/chroot-distro/containers/$DISTRO_LOGIN ]" 2>/dev/null; then
         echo -e "${G}✓ $DNAME directory verified.${NC}"
@@ -233,30 +166,18 @@ elif [ "$SETUP_TYPE" = "1" ]; then
         echo -e "${R}✗ Installation failed — Container directory not found.${NC}"
         exit 1
     fi
-
-    echo -e "${G}✓ $DNAME installed and verified via chroot-distro.${NC}"
-
 fi
-
 sleep 1
 
-# ==============================================================
-# STEP 3 — Desktop environment selection
-# ==============================================================
 banner
-
 if [ "$PKG_TYPE" = "pkg" ]; then
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║       SELECT DESKTOP ENVIRONMENT / WM        ║"
     echo    "╠══════════════════════════════════════════════╣"
-    echo    "║                                              ║"
-    echo    "║   1) XFCE4    (Balanced - Recommended)      ║"
-    echo    "║   2) LXQt     (Very lightweight, fast)      ║"
-    echo    "║   3) Fluxbox  (Minimal, fastest, stable)    ║"
-    echo    "║   4) Openbox  (Minimal, configurable)       ║"
-    echo    "║                                              ║"
-    echo    "║   ⚠ MATE unavailable on Native Termux       ║"
-    echo    "║                                              ║"
+    echo    "║   1) XFCE4                                  ║"
+    echo    "║   2) LXQt                                   ║"
+    echo    "║   3) Fluxbox                                ║"
+    echo    "║   4) Openbox                                ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a desktop (1-4): " de_raw
     case $de_raw in
@@ -268,214 +189,115 @@ else
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║       SELECT DESKTOP ENVIRONMENT / WM        ║"
     echo    "╠══════════════════════════════════════════════╣"
-    echo    "║                                              ║"
-    echo    "║   --- Full Desktop Environments ---          ║"
-    echo    "║   1) XFCE4    (Balanced - Recommended)      ║"
-    echo    "║   2) LXQt     (Very lightweight, fast)      ║"
-    echo    "║   3) MATE     (Classic GNOME 2 style)       ║"
-    echo    "║                                              ║"
-    echo    "║   --- Lightweight Window Managers ---        ║"
-    echo    "║   4) Fluxbox  (Minimal, fastest, stable)    ║"
-    echo    "║   5) Openbox  (Minimal, configurable)       ║"
-    echo    "║                                              ║"
+    echo    "║   1) XFCE4                                  ║"
+    echo    "║   2) LXQt                                   ║"
+    echo    "║   3) MATE                                   ║"
+    echo    "║   4) Fluxbox                                ║"
+    echo    "║   5) Openbox                                ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a desktop (1-5): " de_choice
 fi
 
-# ==============================================================
-# Package definitions per package manager + DE
-# KEY FIXES kept from previous versions:
-#  - librsvg* everywhere (SVG icon crash / Wnck signal 6)
-#  - adwaita-icon-theme (libwnck fallback icon)
-#  - gdk-pixbuf-query-loaders --update-cache after every install
-#  - pypanel → tint2 (pypanel abandoned / AUR-only on Arch)
-#  - openbox: copy /etc/xdg/openbox/ configs before launching
-# ==============================================================
 case $PKG_TYPE in
-
-    pkg) # Native Termux
+    pkg)
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox openbox-menu tint2 xorg-xsetroot"
-               DE_START="openbox-session"
-               DE_NAME="Openbox" ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="lxqt" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox openbox-menu tint2 xorg-xsetroot" DE_START="openbox-session" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="pkg install -y $DE_PKGS"
         APPEAR_CMD="pkg install -y $APPEAR_PKGS"
         ;;
-
-    apt) # Debian, Ubuntu, Pardus, Trisquel, Deepin
+    apt)
         UPD="apt update -y && apt upgrade -y"
         EXTRA="dbus-x11 xauth fonts-noto librsvg2-common adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-desktop-environment dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox openbox-menu tint2 x11-xserver-utils"
-               DE_START="openbox-session"
-               DE_NAME="Openbox" ;;
-            *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="lxqt" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            3) DE_PKGS="mate-desktop-environment dbus-x11" DE_START="dbus-launch --exit-with-session mate-session" DE_NAME="MATE" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox openbox-menu tint2 x11-xserver-utils" DE_START="openbox-session" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         APPEAR_CMD="apt install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
-
-    pacman) # Arch, Artix, Manjaro
+    pacman)
         UPD="pacman -Syu --noconfirm"
         EXTRA="dbus xorg-xauth noto-fonts librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate mate-extra dbus"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox tint2 xorg-xsetroot"
-               DE_START="openbox-session"
-               DE_NAME="Openbox" ;;
-            *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="lxqt" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            3) DE_PKGS="mate mate-extra dbus" DE_START="dbus-launch --exit-with-session mate-session" DE_NAME="MATE" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox tint2 xorg-xsetroot" DE_START="openbox-session" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache"
         APPEAR_CMD="pacman -S --noconfirm $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache"
         ;;
-
-    dnf) # Fedora, AlmaLinux, Oracle, Rocky
+    dnf)
         UPD="dnf update -y"
         EXTRA="dbus-x11 xauth google-noto-fonts-common librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="@xfce-desktop dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="@lxqt-desktop"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-session-manager marco mate-panel mate-desktop caja dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox xfce4-panel xorg-x11-server-utils"
-               DE_START="openbox-session"
-               DE_NAME="Openbox" ;;
-            *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
+            1) DE_PKGS="@xfce-desktop dbus-x11" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="@lxqt-desktop" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            3) DE_PKGS="mate-session-manager marco mate-panel mate-desktop caja dbus-x11" DE_START="dbus-launch --exit-with-session mate-session" DE_NAME="MATE" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox xfce4-panel xorg-x11-server-utils" DE_START="openbox-session" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
         APPEAR_CMD="dnf install -y $APPEAR_PKGS && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
         ;;
-
-    apk) # Alpine, Chimera, Adelie
+    apk)
         UPD="apk update && apk upgrade"
         EXTRA="dbus-x11 xauth font-noto librsvg adwaita-icon-theme"
         APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-extras dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt lxqt-session"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="marco mate-panel mate-session-manager caja dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox tint2 xsetroot"
-               DE_START="openbox"
-               DE_NAME="Openbox" ;;
-            *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
+            1) DE_PKGS="xfce4 xfce4-extras dbus-x11" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="lxqt lxqt-session" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            3) DE_PKGS="marco mate-panel mate-session-manager caja dbus-x11" DE_START="dbus-launch --exit-with-session mate-session" DE_NAME="MATE" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox tint2 xsetroot" DE_START="openbox" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         APPEAR_CMD="$UPD && apk add $APPEAR_PKGS && (apk add lxappearance 2>/dev/null || (echo '@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories && apk update && apk add lxappearance@testing)) && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
-
-    xbps) # Void Linux
+    xbps)
         UPD="xbps-install -Suy"
         EXTRA="dbus-x11 xauth noto-fonts-ttf librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate mate-extra dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox tint2 xsetroot"
-               DE_START="openbox-session"
-               DE_NAME="Openbox" ;;
-            *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="lxqt" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            3) DE_PKGS="mate mate-extra dbus-x11" DE_START="dbus-launch --exit-with-session mate-session" DE_NAME="MATE" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox tint2 xsetroot" DE_START="openbox-session" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         APPEAR_CMD="xbps-install -y $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
-
-    zypper) # OpenSUSE
+    zypper)
         UPD="zypper --non-interactive refresh && zypper --non-interactive update"
         EXTRA="dbus-1-x11 xauth google-noto-fonts librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus-1-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-session-manager marco mate-panel caja dbus-1-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
-            4) DE_PKGS="fluxbox"
-               DE_START="fluxbox"
-               DE_NAME="Fluxbox" ;;
-            5) DE_PKGS="openbox lxpanel xsetroot"
-               DE_START="openbox-session"
-               DE_NAME="Openbox" ;;
-            *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
+            1) DE_PKGS="xfce4 xfce4-goodies dbus-1-x11" DE_START="dbus-launch --exit-with-session xfce4-session" DE_NAME="XFCE4" ;;
+            2) DE_PKGS="lxqt" DE_START="startlxqt" DE_NAME="LXQt" ;;
+            3) DE_PKGS="mate-session-manager marco mate-panel caja dbus-1-x11" DE_START="dbus-launch --exit-with-session mate-session" DE_NAME="MATE" ;;
+            4) DE_PKGS="fluxbox" DE_START="fluxbox" DE_NAME="Fluxbox" ;;
+            5) DE_PKGS="openbox lxpanel xsetroot" DE_START="openbox-session" DE_NAME="Openbox" ;;
         esac
         INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         APPEAR_CMD="zypper --non-interactive install $APPEAR_PKGS && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
         ;;
 esac
 
-# ==============================================================
-# STEP 4 — Install DE
-# ==============================================================
 echo -e "${G}✓ Selected: $DE_NAME${NC}"
 echo -e "${Y}--- [4/5] Installing $DE_NAME in $DNAME ---${NC}"
-echo -e "${Y}    (This may take several minutes...)${NC}"
 
 if [ "$PKG_TYPE" = "pkg" ]; then
     bash -c "$INSTALL_CMD"
@@ -484,28 +306,12 @@ elif [ "$SETUP_TYPE" = "0" ]; then
 else
     su -c "/data/data/com.termux/files/usr/bin/chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$INSTALL_CMD'"
 fi
-
 echo -e "${G}✓ $DE_NAME installed.${NC}"
 sleep 1
 
-# ==============================================================
-# STEP 5 — Appearance packages (optional)
-# ==============================================================
 banner
-echo -e "${C}╔══════════════════════════════════════════════╗"
-echo    "║         RECOMMENDED APPEARANCE PACKAGES      ║"
-echo    "╠══════════════════════════════════════════════╣"
-echo    "║                                              ║"
-echo    "║  • Arc Theme / Metatheme  (Modern GTK)      ║"
-echo    "║  • Papirus Icons          (Icon pack)       ║"
-echo    "║  • Noto Color Emoji       (Emoji support)   ║"
-echo    "║  • DejaVu / Ubuntu Fonts  (Clean fonts)     ║"
-echo    "║  • Qt5ct                  (Qt theming tool) ║"
-echo    "║  • LXAppearance           (GTK switcher)    ║"
-echo    "║                                              ║"
-echo -e "╚══════════════════════════════════════════════╝${NC}"
-echo ""
-read -p "$(echo -e "${Y}")Install recommended appearance packages? [Y/n]: $(echo -e "${NC}")" appear_choice
+echo -e "${Y}Install recommended appearance packages? [Y/n]: ${NC}"
+read appear_choice
 appear_choice="${appear_choice:-Y}"
 
 if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
@@ -525,9 +331,6 @@ else
 fi
 sleep 1
 
-# ==============================================================
-# Openbox / Fluxbox init (embedded in start.sh)
-# ==============================================================
 FLUXBOX_INIT=""
 if [ "$DE_NAME" = "Fluxbox" ]; then
     FLUXBOX_INIT='mkdir -p ~/.fluxbox && fluxbox-generate_menu 2>/dev/null || true'
@@ -542,16 +345,8 @@ if [ "$DE_NAME" = "Openbox" ]; then
 grep -q "tint2" ~/.config/openbox/autostart 2>/dev/null || printf "\nxsetroot -solid \"#2d2d2d\" &\ntint2 &\n" >> ~/.config/openbox/autostart'
 fi
 
-# ==============================================================
-# STEP 6 — Generate ~/start.sh
-# IMPORTANT: each variant is written with a SINGLE heredoc using
-# a quoted delimiter for the literal parts and careful escaping
-# for variable substitution — this avoids the "unexpected EOF"
-# bug caused by mixing quoted/unquoted heredocs back to back.
-# ==============================================================
 echo -e "${Y}--- Creating ~/start.sh launcher ---${NC}"
 
-# ---- Native Termux ----
 if [ "$PKG_TYPE" = "pkg" ]; then
 
 cat > ~/start.sh << STARTSCRIPT
@@ -582,7 +377,6 @@ pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
-# ---- proot ----
 elif [ "$SETUP_TYPE" = "0" ]; then
 
 cat > ~/start.sh << STARTSCRIPT
@@ -619,13 +413,9 @@ pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
-# ---- chroot-distro ----
 else
 
-# Build the inner DE-launch command as a plain string first,
-# then embed it with single quotes in the su -c call.
-# This avoids nested double-quote / heredoc conflicts entirely.
-DE_INNER_CMD="export DISPLAY=127.0.0.1:0; export PULSE_SERVER=127.0.0.1; export GALLIUM_DRIVER=virpipe; export MESA_GL_VERSION_OVERRIDE=4.0; export XDG_RUNTIME_DIR=/tmp/runtime-chroot; mkdir -p \$XDG_RUNTIME_DIR; chmod 700 \$XDG_RUNTIME_DIR"
+DE_INNER_CMD="export DISPLAY=:0; export PULSE_SERVER=127.0.0.1; export GALLIUM_DRIVER=virpipe; export MESA_GL_VERSION_OVERRIDE=4.0; export XDG_RUNTIME_DIR=/tmp/runtime-chroot; mkdir -p \$XDG_RUNTIME_DIR; chmod 700 \$XDG_RUNTIME_DIR"
 [ -n "$FLUXBOX_INIT" ] && DE_INNER_CMD="$DE_INNER_CMD; $FLUXBOX_INIT"
 [ -n "$OPENBOX_INIT" ] && DE_INNER_CMD="$DE_INNER_CMD; $OPENBOX_INIT"
 DE_INNER_CMD="$DE_INNER_CMD; $DE_START"
@@ -654,7 +444,9 @@ sleep 1
 
 echo -e "\${G}Launching $DE_NAME in $DNAME (chroot-distro)...\${NC}"
 
-su -c "/data/data/com.termux/files/usr/bin/chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$DE_INNER_CMD'"
+# IL FIX DEFINITIVO: Forza il bind-mount fisico del socket X11 dentro il chroot
+CHROOT_FS="/data/data/com.termux/files/usr/var/lib/chroot-distro/containers/$DISTRO_LOGIN"
+su -c "mkdir -p \${CHROOT_FS}/tmp/.X11-unix && (grep -q \${CHROOT_FS}/tmp/.X11-unix /proc/mounts || mount --bind \${TMPDIR}/.X11-unix \${CHROOT_FS}/tmp/.X11-unix) && /data/data/com.termux/files/usr/bin/chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$DE_INNER_CMD'"
 
 kill \$VIRGL_PID 2>/dev/null
 pkill -f pulseaudio 2>/dev/null
@@ -665,36 +457,6 @@ fi
 
 chmod +x ~/start.sh
 
-# ==============================================================
-# Done
-# ==============================================================
 banner
-echo -e "${G}"
-echo "╔══════════════════════════════════════════════╗"
-echo "║            ✓  SETUP COMPLETE!               ║"
-echo "╠══════════════════════════════════════════════╣"
-if [ "$SETUP_TYPE" = "0" ]; then
-echo "║  Mode    : proot"
-else
-echo "║  Mode    : chroot-distro"
-fi
-echo "║  Distro  : $DNAME"
-echo "║  Desktop : $DE_NAME"
-echo "║  Display : Termux-X11"
-if [ "$APPEAR_INSTALLED" = true ]; then
-echo "║  Appearance: Installed ✓"
-else
-echo "║  Appearance: Skipped"
-fi
-echo "╠══════════════════════════════════════════════╣"
-echo "║  HOW TO START:                               ║"
-echo "║                                              ║"
-echo "║  1. Install Termux-X11 APK from:            ║"
-echo "║     github.com/termux/termux-x11/releases   ║"
-echo "║                                              ║"
-echo "║  2. Run in Termux:   ./start.sh              ║"
-echo "║                                              ║"
-echo "║  3. Open the Termux-X11 app on your device  ║"
-echo "║                                              ║"
-echo "╚══════════════════════════════════════════════╝"
-echo -e "${NC}"
+echo -e "${G}✓ SETUP COMPLETE!${NC}"
+echo "Run ./start.sh to launch."
