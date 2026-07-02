@@ -220,16 +220,16 @@ elif [ "$SETUP_TYPE" = "1" ]; then
     echo -e "${Y}--- [3/5] Setting up $DNAME via chroot-distro ---${NC}"
 
     echo -e "${Y}  Downloading rootfs for $DISTRO (as root)...${NC}"
-    su -c "export PREFIX=/data/data/com.termux/files/usr; /data/data/com.termux/files/usr/bin/chroot-distro download $DISTRO"
+    su -p -c "chroot-distro download $DISTRO"
 
     echo -e "${Y}  Installing $DISTRO (as root)...${NC}"
-    su -c "export PREFIX=/data/data/com.termux/files/usr; /data/data/com.termux/files/usr/bin/chroot-distro install $DISTRO"
+    su -p -c "chroot-distro install $DISTRO"
 
     # Verify the container was actually installed before continuing
     echo -e "${Y}  Verifying installation...${NC}"
-    if ! su -c "export PREFIX=/data/data/com.termux/files/usr; /data/data/com.termux/files/usr/bin/chroot-distro list" 2>/dev/null | grep -qi "$DISTRO_LOGIN"; then
+    if ! su -p -c "chroot-distro list" 2>/dev/null | grep -qi "$DISTRO_LOGIN"; then
         echo -e "${R}✗ Installation failed — '$DISTRO_LOGIN' is not in the container list.${NC}"
-        echo -e "${Y}  Run 'su -c \"export PREFIX=/data/data/com.termux/files/usr; chroot-distro list\"' to check manually.${NC}"
+        echo -e "${Y}  Run 'su -p -c \"chroot-distro list\"' to check manually.${NC}"
         exit 1
     fi
 
@@ -481,7 +481,7 @@ if [ "$PKG_TYPE" = "pkg" ]; then
 elif [ "$SETUP_TYPE" = "0" ]; then
     proot-distro login "$DISTRO" -- bash -c "$INSTALL_CMD"
 else
-    su -c "export PREFIX=/data/data/com.termux/files/usr; /data/data/com.termux/files/usr/bin/chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$INSTALL_CMD'"
+    su -p -c "chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$INSTALL_CMD'"
 fi
 
 echo -e "${G}✓ $DE_NAME installed.${NC}"
@@ -514,7 +514,7 @@ if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
     elif [ "$SETUP_TYPE" = "0" ]; then
         proot-distro login "$DISTRO" -- bash -c "$APPEAR_CMD"
     else
-        su -c "export PREFIX=/data/data/com.termux/files/usr; /data/data/com.termux/files/usr/bin/chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$APPEAR_CMD'"
+        su -p -c "chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$APPEAR_CMD'"
     fi
     APPEAR_INSTALLED=true
     echo -e "${G}✓ Appearance packages installed.${NC}"
@@ -650,7 +650,7 @@ sleep 1
 
 echo -e "\${G}Launching $DE_NAME in $DNAME (chroot-distro)...\${NC}"
 
-su -c "export PREFIX=/data/data/com.termux/files/usr; /data/data/com.termux/files/usr/bin/chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$DE_INNER_CMD'"
+su -p -c "chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$DE_INNER_CMD'"
 
 kill \$VIRGL_PID 2>/dev/null
 pkill -f pulseaudio 2>/dev/null
