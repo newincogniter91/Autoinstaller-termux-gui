@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v3.4
+#  TERMUX-X11 FULL SETUP SCRIPT v3.4.1
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  Mode 0 — proot         : No root required. All 18 distros.
@@ -18,8 +18,8 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.4       ║"
-    echo "║     proot · chroot-distro  —  TX11          ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.4             ║"
+    echo "║     proot · chroot *not working  —  TX11          ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -52,10 +52,10 @@ banner
 echo -e "${C}╔══════════════════════════════════════════════╗"
 echo    "║              SELECT SETUP MODE               ║"
 echo    "╠══════════════════════════════════════════════╣"
-echo    "║                                              ║"
-echo    "║  0) proot           (No root)               ║"
-echo    "║  1) chroot-distro   (Root required)         ║"
-echo    "║                                              ║"
+echo    "║                                                   ║"
+echo    "║  0) proot                 (No root)               ║"
+echo    "║  1) chroot *not working   (Root required)         ║"
+echo    "║                                                   ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
 read -p "Select mode (0-1): " SETUP_TYPE
 
