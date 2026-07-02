@@ -1,19 +1,17 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v3.2
+#  TERMUX-X11 FULL SETUP SCRIPT v3.3
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  Mode 0 — proot         : No root required. All 18 distros.
 #                           Uses proot-distro.
 #  Mode 1 — chroot-distro : Root required.
-#                           Installed via pip as specified:
 #                             pkg install coreutils sudo python mount-utils -y
 #                             pip install chroot-distro
-#                             tsu
-#                             chroot-distro download <distro>
-#                             chroot-distro install <distro>
-#                             chroot-distro login <distro>
+#                             su -c "chroot-distro download <distro>"
+#                             su -c "chroot-distro install <distro>"
+#                             su -c "chroot-distro login <distro>"
 #
 #  DE/WM: XFCE4, LXQt, MATE(*), Fluxbox, Openbox
 #  (*) MATE not available on Native Termux
@@ -30,7 +28,7 @@ banner() {
     clear
     echo -e "${C}"
     echo "╔══════════════════════════════════════════════╗"
-    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.2       ║"
+    echo "║   TERMUX-X11 LINUX DESKTOP SETUP v3.3       ║"
     echo "║     proot · chroot-distro  —  TX11          ║"
     echo "╚══════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -175,7 +173,7 @@ if [ "$SETUP_TYPE" = "0" ]; then
         echo -e "${G}✓ Native Termux — no proot needed.${NC}"
     fi
 
-# ---- CHROOT-DISTRO (installed exactly as specified) ----
+# ---- CHROOT-DISTRO ----
 elif [ "$SETUP_TYPE" = "1" ]; then
 
     check_root
@@ -194,38 +192,48 @@ elif [ "$SETUP_TYPE" = "1" ]; then
     echo    "║     SELECT CHROOT-DISTRO DISTRIBUTION        ║"
     echo    "╠══════════════════════════════════════════════╣"
     echo    "║                                              ║"
-    echo    "║   1) Debian                                 ║"
-    echo    "║   2) Ubuntu                                 ║"
-    echo    "║   3) Alpine Linux                           ║"
-    echo    "║   4) Arch Linux                             ║"
-    echo    "║   5) Fedora                                 ║"
-    echo    "║   6) OpenSUSE                                ║"
-    echo    "║   7) Void Linux                              ║"
+    echo    "║   1) debian                                 ║"
+    echo    "║   2) ubuntu:25.10                           ║"
+    echo    "║   3) alpine                                 ║"
+    echo    "║   4) archlinux                              ║"
+    echo    "║   5) fedora                                 ║"
+    echo    "║   6) opensuse                               ║"
+    echo    "║   7) void                                   ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
     read -p "Select a distro (1-7): " cd_choice
 
     case $cd_choice in
-        1) DISTRO="debian";    PKG_TYPE="apt";    DNAME="Debian"       ;;
-        2) DISTRO="ubuntu";    PKG_TYPE="apt";    DNAME="Ubuntu"       ;;
-        3) DISTRO="alpine";    PKG_TYPE="apk";    DNAME="Alpine Linux" ;;
-        4) DISTRO="archlinux"; PKG_TYPE="pacman"; DNAME="Arch Linux"   ;;
-        5) DISTRO="fedora";    PKG_TYPE="dnf";    DNAME="Fedora"       ;;
-        6) DISTRO="opensuse";  PKG_TYPE="zypper"; DNAME="OpenSUSE"     ;;
-        7) DISTRO="void";      PKG_TYPE="xbps";   DNAME="Void Linux"   ;;
+        1) DISTRO="debian";       PKG_TYPE="apt";    DNAME="Debian"       ;;
+        2) DISTRO="ubuntu:25.10"; PKG_TYPE="apt";    DNAME="Ubuntu"       ;;
+        3) DISTRO="alpine";       PKG_TYPE="apk";    DNAME="Alpine Linux" ;;
+        4) DISTRO="archlinux";    PKG_TYPE="pacman"; DNAME="Arch Linux"   ;;
+        5) DISTRO="fedora";       PKG_TYPE="dnf";    DNAME="Fedora"       ;;
+        6) DISTRO="opensuse";     PKG_TYPE="zypper"; DNAME="OpenSUSE"     ;;
+        7) DISTRO="void";         PKG_TYPE="xbps";   DNAME="Void Linux"   ;;
         *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
     esac
 
+    # Login name used by chroot-distro (strips the :tag part, e.g. ubuntu:25.10 -> ubuntu)
+    DISTRO_LOGIN="${DISTRO%%:*}"
+
     echo -e "${Y}--- [3/5] Setting up $DNAME via chroot-distro ---${NC}"
 
-    echo -e "${Y}  Getting root privileges (tsu)...${NC}"
-    echo -e "${Y}  Downloading rootfs for $DISTRO...${NC}"
-    tsu -c "chroot-distro download $DISTRO"
+    echo -e "${Y}  Downloading rootfs for $DISTRO (as root)...${NC}"
+    su -c "chroot-distro download $DISTRO"
 
-    echo -e "${Y}  Installing $DISTRO...${NC}"
-    tsu -c "chroot-distro install $DISTRO"
+    echo -e "${Y}  Installing $DISTRO (as root)...${NC}"
+    su -c "chroot-distro install $DISTRO"
 
-    echo -e "${G}✓ $DNAME installed via chroot-distro.${NC}"
+    # Verify the container was actually installed before continuing
+    echo -e "${Y}  Verifying installation...${NC}"
+    if ! su -c "chroot-distro list" 2>/dev/null | grep -qi "$DISTRO_LOGIN"; then
+        echo -e "${R}✗ Installation failed — '$DISTRO_LOGIN' is not in the container list.${NC}"
+        echo -e "${Y}  Run 'su -c \"chroot-distro list\"' to check manually.${NC}"
+        exit 1
+    fi
+
+    echo -e "${G}✓ $DNAME installed and verified via chroot-distro.${NC}"
 
 fi
 
@@ -473,7 +481,7 @@ if [ "$PKG_TYPE" = "pkg" ]; then
 elif [ "$SETUP_TYPE" = "0" ]; then
     proot-distro login "$DISTRO" -- bash -c "$INSTALL_CMD"
 else
-    tsu -c "chroot-distro login $DISTRO -- /bin/sh -c \"$INSTALL_CMD\""
+    su -c "chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$INSTALL_CMD'"
 fi
 
 echo -e "${G}✓ $DE_NAME installed.${NC}"
@@ -506,7 +514,7 @@ if [[ "$appear_choice" =~ ^[Yy]$ ]]; then
     elif [ "$SETUP_TYPE" = "0" ]; then
         proot-distro login "$DISTRO" -- bash -c "$APPEAR_CMD"
     else
-        tsu -c "chroot-distro login $DISTRO -- /bin/sh -c \"$APPEAR_CMD\""
+        su -c "chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$APPEAR_CMD'"
     fi
     APPEAR_INSTALLED=true
     echo -e "${G}✓ Appearance packages installed.${NC}"
@@ -535,22 +543,29 @@ fi
 
 # ==============================================================
 # STEP 6 — Generate ~/start.sh
+# IMPORTANT: each variant is written with a SINGLE heredoc using
+# a quoted delimiter for the literal parts and careful escaping
+# for variable substitution — this avoids the "unexpected EOF"
+# bug caused by mixing quoted/unquoted heredocs back to back.
 # ==============================================================
 echo -e "${Y}--- Creating ~/start.sh launcher ---${NC}"
 
 # ---- Native Termux ----
 if [ "$PKG_TYPE" = "pkg" ]; then
 
-cat > ~/start.sh << 'STARTEOF'
+cat > ~/start.sh << STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
-STARTEOF
-cat >> ~/start.sh << STARTSCRIPT
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
 echo -e "\${C}[ Native Termux + $DE_NAME ]\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio 2>/dev/null; pkill -f virgl_test_server 2>/dev/null; sleep 1
-pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1; sleep 1
-virgl_test_server_android & VIRGL_PID=\$!; sleep 1
+pkill -f pulseaudio 2>/dev/null
+pkill -f virgl_test_server 2>/dev/null
+sleep 1
+pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1
+sleep 1
+virgl_test_server_android &
+VIRGL_PID=\$!
+sleep 1
 export XDG_RUNTIME_DIR=\${TMPDIR}
 export PULSE_SERVER=127.0.0.1
 export GALLIUM_DRIVER=virpipe
@@ -561,27 +576,32 @@ termux-x11 :0 -xstartup "$DE_START" &
 sleep 3
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
 wait
-kill \$VIRGL_PID 2>/dev/null; pkill -f pulseaudio 2>/dev/null
+kill \$VIRGL_PID 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
 # ---- proot ----
 elif [ "$SETUP_TYPE" = "0" ]; then
 
-cat > ~/start.sh << 'STARTEOF'
+cat > ~/start.sh << STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
-STARTEOF
-cat >> ~/start.sh << STARTSCRIPT
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
 echo -e "\${C}[ $DNAME proot + $DE_NAME ]\${NC}"
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio 2>/dev/null; pkill -f virgl_test_server 2>/dev/null; sleep 1
-pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1; sleep 1
-virgl_test_server_android & VIRGL_PID=\$!; sleep 1
+pkill -f pulseaudio 2>/dev/null
+pkill -f virgl_test_server 2>/dev/null
+sleep 1
+pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1
+sleep 1
+virgl_test_server_android &
+VIRGL_PID=\$!
+sleep 1
 export XDG_RUNTIME_DIR=\${TMPDIR}
 termux-x11 :0 >/dev/null &
 sleep 3
-am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; sleep 1
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+sleep 1
 proot-distro login $DISTRO --shared-tmp -- bash -c "
   export DISPLAY=:0
   export PULSE_SERVER=127.0.0.1
@@ -593,45 +613,47 @@ proot-distro login $DISTRO --shared-tmp -- bash -c "
   $OPENBOX_INIT
   $DE_START
 "
-kill \$VIRGL_PID 2>/dev/null; pkill -f pulseaudio 2>/dev/null
+kill \$VIRGL_PID 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
 # ---- chroot-distro ----
 else
 
-cat > ~/start.sh << 'STARTEOF'
+# Build the inner DE-launch command as a plain string first,
+# then embed it with single quotes in the su -c call.
+# This avoids nested double-quote / heredoc conflicts entirely.
+DE_INNER_CMD="export DISPLAY=:0; export PULSE_SERVER=127.0.0.1; export GALLIUM_DRIVER=virpipe; export MESA_GL_VERSION_OVERRIDE=4.0; export XDG_RUNTIME_DIR=/tmp/runtime-chroot; mkdir -p \$XDG_RUNTIME_DIR; chmod 700 \$XDG_RUNTIME_DIR; ${FLUXBOX_INIT}; ${OPENBOX_INIT}; ${DE_START}"
+
+cat > ~/start.sh << STARTSCRIPT
 #!/data/data/com.termux/files/usr/bin/bash
-STARTEOF
-cat >> ~/start.sh << STARTSCRIPT
 R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
 echo -e "\${C}[ $DNAME chroot-distro + $DE_NAME ]\${NC}"
 
 kill -9 \$(pgrep -f "termux.x11") 2>/dev/null
-pkill -f pulseaudio 2>/dev/null; pkill -f virgl_test_server 2>/dev/null; sleep 1
-pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1; sleep 1
-virgl_test_server_android & VIRGL_PID=\$!; sleep 1
+pkill -f pulseaudio 2>/dev/null
+pkill -f virgl_test_server 2>/dev/null
+sleep 1
+
+pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1
+sleep 1
+virgl_test_server_android &
+VIRGL_PID=\$!
+sleep 1
 
 export XDG_RUNTIME_DIR=\${TMPDIR}
 termux-x11 :0 >/dev/null &
 sleep 3
-am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; sleep 1
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+sleep 1
 
 echo -e "\${G}Launching $DE_NAME in $DNAME (chroot-distro)...\${NC}"
 
-tsu -c "chroot-distro login $DISTRO -- /bin/sh -c '
-  export DISPLAY=:0
-  export PULSE_SERVER=127.0.0.1
-  export GALLIUM_DRIVER=virpipe
-  export MESA_GL_VERSION_OVERRIDE=4.0
-  export XDG_RUNTIME_DIR=/tmp/runtime-chroot
-  mkdir -p \\\$XDG_RUNTIME_DIR && chmod 700 \\\$XDG_RUNTIME_DIR
-  $FLUXBOX_INIT
-  $OPENBOX_INIT
-  $DE_START
-'"
+su -c "chroot-distro login $DISTRO_LOGIN -- /bin/sh -c '$DE_INNER_CMD'"
 
-kill \$VIRGL_PID 2>/dev/null; pkill -f pulseaudio 2>/dev/null
+kill \$VIRGL_PID 2>/dev/null
+pkill -f pulseaudio 2>/dev/null
 echo -e "\${G}Done.\${NC}"
 STARTSCRIPT
 
