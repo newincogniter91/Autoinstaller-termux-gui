@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v5.0
+#  TERMUX-X11 FULL SETUP SCRIPT v5.5
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  ACTION 0 — Install a Linux desktop
@@ -13,8 +13,8 @@
 #    Native Termux for installed desktop environments, lists what
 #    it finds, and lets you remove just the DE or the whole system.
 #
-#  DE/WM: XFCE4, LXQt, MATE(*), Fluxbox, Openbox
-#  (*) MATE not available on Native Termux
+#  DE/WM: XFCE4, LXQt, MATE(*), KDE Plasma(*), GNOME(*), Fluxbox, Openbox
+#  (*) MATE / KDE Plasma / GNOME not available on Native Termux
 #  Display: Termux-X11 ONLY
 # ==============================================================
 
@@ -51,6 +51,8 @@ de_binary() {
         xfce4)   echo "xfce4-session"  ;;
         lxqt)    echo "startlxqt"      ;;
         mate)    echo "mate-session"   ;;
+        kde)     echo "startplasma-x11";;
+        gnome)   echo "gnome-session"  ;;
         fluxbox) echo "fluxbox"        ;;
         openbox) echo "openbox"        ;;
     esac
@@ -61,6 +63,8 @@ de_label() {
         xfce4)   echo "XFCE4"   ;;
         lxqt)    echo "LXQt"    ;;
         mate)    echo "MATE"    ;;
+        kde)     echo "KDE Plasma" ;;
+        gnome)   echo "GNOME"   ;;
         fluxbox) echo "Fluxbox" ;;
         openbox) echo "Openbox" ;;
     esac
@@ -83,6 +87,8 @@ de_remove_pkgs() {
                 xfce4)   echo "xfce4 xfce4-goodies" ;;
                 lxqt)    echo "lxqt" ;;
                 mate)    echo "mate-desktop-environment" ;;
+                kde)     echo "kde-plasma-desktop dolphin konsole" ;;
+                gnome)   echo "gnome-core gnome-terminal" ;;
                 fluxbox) echo "fluxbox" ;;
                 openbox) echo "openbox openbox-menu tint2" ;;
             esac ;;
@@ -91,6 +97,8 @@ de_remove_pkgs() {
                 xfce4)   echo "xfce4 xfce4-goodies" ;;
                 lxqt)    echo "lxqt" ;;
                 mate)    echo "mate mate-extra" ;;
+                kde)     echo "plasma-desktop konsole dolphin plasma-nm powerdevil kde-gtk-config" ;;
+                gnome)   echo "gnome-shell gnome-control-center gnome-terminal nautilus" ;;
                 fluxbox) echo "fluxbox" ;;
                 openbox) echo "openbox tint2" ;;
             esac ;;
@@ -99,6 +107,8 @@ de_remove_pkgs() {
                 xfce4)   echo "@xfce-desktop" ;;
                 lxqt)    echo "@lxqt-desktop" ;;
                 mate)    echo "mate-session-manager marco mate-panel mate-desktop caja" ;;
+                kde)     echo "@kde-desktop-environment" ;;
+                gnome)   echo "@gnome-desktop" ;;
                 fluxbox) echo "fluxbox" ;;
                 openbox) echo "openbox xfce4-panel" ;;
             esac ;;
@@ -107,6 +117,8 @@ de_remove_pkgs() {
                 xfce4)   echo "xfce4 xfce4-extras" ;;
                 lxqt)    echo "lxqt lxqt-session" ;;
                 mate)    echo "marco mate-panel mate-session-manager caja" ;;
+                kde)     echo "plasma-desktop-meta kde-applications-base" ;;
+                gnome)   echo "gnome gnome-apps-core" ;;
                 fluxbox) echo "fluxbox" ;;
                 openbox) echo "openbox tint2" ;;
             esac ;;
@@ -115,6 +127,8 @@ de_remove_pkgs() {
                 xfce4)   echo "xfce4 xfce4-goodies" ;;
                 lxqt)    echo "lxqt" ;;
                 mate)    echo "mate mate-extra" ;;
+                kde)     echo "kde5 kde5-baseapps" ;;
+                gnome)   echo "gnome" ;;
                 fluxbox) echo "fluxbox" ;;
                 openbox) echo "openbox tint2" ;;
             esac ;;
@@ -123,6 +137,8 @@ de_remove_pkgs() {
                 xfce4)   echo "xfce4 xfce4-goodies" ;;
                 lxqt)    echo "lxqt" ;;
                 mate)    echo "mate-session-manager marco mate-panel caja" ;;
+                kde)     echo "pattern:kde_plasma" ;;
+                gnome)   echo "pattern:gnome_basic pattern:gnome_x11" ;;
                 fluxbox) echo "fluxbox" ;;
                 openbox) echo "openbox lxpanel" ;;
             esac ;;
@@ -154,12 +170,13 @@ echo    "║   0) Install a Linux desktop                ║"
 echo    "║   1) Uninstall a desktop or system           ║"
 echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
-read -p "Select an option (0-1): " ACTION
-
-case $ACTION in
-    0|1) ;;
-    *) echo -e "${R}Invalid choice. Exiting.${NC}"; exit 1 ;;
-esac
+while true; do
+    read -p "Select an option (0-1): " ACTION
+    case $ACTION in
+        0|1) break ;;
+        *) echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+    esac
+done
 
 # ================================================================
 # ================================================================
@@ -210,7 +227,7 @@ if [ "$ACTION" = "1" ]; then
                     *) ptype="apt" ;;
                 esac
                 FOUND_ANY_DE=0
-                for dekey in xfce4 lxqt mate fluxbox openbox; do
+                for dekey in xfce4 lxqt mate kde gnome fluxbox openbox; do
                     bin=$(de_binary "$dekey")
                     if proot-distro login "$pd" -- /bin/sh -c "command -v $bin" >/dev/null 2>&1; then
                         FOUND_LABELS+=("proot: $pd — $(de_label "$dekey")")
@@ -259,7 +276,7 @@ if [ "$ACTION" = "1" ]; then
                     *) ptype="apt" ;;
                 esac
                 FOUND_ANY_DE=0
-                for dekey in xfce4 lxqt mate fluxbox openbox; do
+                for dekey in xfce4 lxqt mate kde gnome fluxbox openbox; do
                     bin=$(de_binary "$dekey")
                     if sudo chroot-distro login "$cd_name" -- /bin/sh -c "command -v $bin" >/dev/null 2>&1; then
                         FOUND_LABELS+=("chroot-distro: $cd_name — $(de_label "$dekey")")
@@ -300,13 +317,14 @@ if [ "$ACTION" = "1" ]; then
         printf "  %2d) %s\n" "$((i+1))" "${FOUND_LABELS[$i]}"
     done
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select an entry (1-${#FOUND_LABELS[@]}): " sel
-    idx=$((sel-1))
-
-    if [ -z "${FOUND_LABELS[$idx]:-}" ]; then
-        echo -e "${R}Invalid choice. Exiting.${NC}"
-        exit 1
-    fi
+    while true; do
+        read -p "Select an entry (1-${#FOUND_LABELS[@]}): " sel
+        if [[ "$sel" =~ ^[0-9]+$ ]]; then
+            idx=$((sel-1))
+            [ -n "${FOUND_LABELS[$idx]:-}" ] && break
+        fi
+        echo -e "${R}Invalid choice. Please try again.${NC}"
+    done
 
     SRC="${FOUND_SOURCE[$idx]}"
     DIST="${FOUND_DISTRO[$idx]}"
@@ -326,7 +344,15 @@ if [ "$ACTION" = "1" ]; then
     fi
     echo    "║   3) Cancel                                  ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select an action: " uact
+    while true; do
+        read -p "Select an action: " uact
+        case "$uact" in
+            1) [ -n "$DEKEY" ] && break ;;
+            2) [ "$SRC" != "native" ] && break ;;
+            3) break ;;
+        esac
+        echo -e "${R}Invalid choice. Please try again.${NC}"
+    done
 
     case "$uact" in
         1)
@@ -425,12 +451,13 @@ echo    "║     Installed via pip. Uses sudo.           ║"
 echo    "║     Try proot first if unsure.              ║"
 echo    "║                                              ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
-read -p "Select mode (0-1): " SETUP_TYPE
-
-case $SETUP_TYPE in
-    0|1) ;;
-    *) echo -e "${R}Invalid choice. Exiting.${NC}"; exit 1 ;;
-esac
+while true; do
+    read -p "Select mode (0-1): " SETUP_TYPE
+    case $SETUP_TYPE in
+        0|1) break ;;
+        *) echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+    esac
+done
 
 # ==============================================================
 # STEP 2b — Distro selection
@@ -475,29 +502,30 @@ if [ "$SETUP_TYPE" = "0" ]; then
     echo    "║   17) Deepin        (Beautiful Chinese DE)  ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select a distro (0-17): " distro_choice
-
-    case $distro_choice in
-        0)  DISTRO="native";      PKG_TYPE="pkg";    DNAME="Native Termux"  ;;
-        1)  DISTRO="debian";      PKG_TYPE="apt";    DNAME="Debian"         ;;
-        2)  DISTRO="ubuntu";      PKG_TYPE="apt";    DNAME="Ubuntu"         ;;
-        3)  DISTRO="trisquel";    PKG_TYPE="apt";    DNAME="Trisquel"       ;;
-        4)  DISTRO="pardus";      PKG_TYPE="apt";    DNAME="Pardus"         ;;
-        5)  DISTRO="archlinux";   PKG_TYPE="pacman"; DNAME="Arch Linux"     ;;
-        6)  DISTRO="artix";       PKG_TYPE="pacman"; DNAME="Artix Linux"    ;;
-        7)  DISTRO="manjaro";     PKG_TYPE="pacman"; DNAME="Manjaro"        ;;
-        8)  DISTRO="fedora";      PKG_TYPE="dnf";    DNAME="Fedora"         ;;
-        9)  DISTRO="almalinux";   PKG_TYPE="dnf";    DNAME="AlmaLinux"      ;;
-        10) DISTRO="oracle";      PKG_TYPE="dnf";    DNAME="Oracle Linux"   ;;
-        11) DISTRO="rockylinux";  PKG_TYPE="dnf";    DNAME="Rocky Linux"    ;;
-        12) DISTRO="alpine";      PKG_TYPE="apk";    DNAME="Alpine Linux"   ;;
-        13) DISTRO="void";        PKG_TYPE="xbps";   DNAME="Void Linux"     ;;
-        14) DISTRO="opensuse";    PKG_TYPE="zypper"; DNAME="OpenSUSE"       ;;
-        15) DISTRO="chimera";     PKG_TYPE="apk";    DNAME="Chimera Linux"  ;;
-        16) DISTRO="adelie";      PKG_TYPE="apk";    DNAME="Adelie Linux"   ;;
-        17) DISTRO="deepin";      PKG_TYPE="apt";    DNAME="Deepin"         ;;
-        *)  echo -e "${R}Invalid choice. Exiting.${NC}"; exit 1 ;;
-    esac
+    while true; do
+        read -p "Select a distro (0-17): " distro_choice
+        case $distro_choice in
+            0)  DISTRO="native";      PKG_TYPE="pkg";    DNAME="Native Termux"  ; break ;;
+            1)  DISTRO="debian";      PKG_TYPE="apt";    DNAME="Debian"         ; break ;;
+            2)  DISTRO="ubuntu";      PKG_TYPE="apt";    DNAME="Ubuntu"         ; break ;;
+            3)  DISTRO="trisquel";    PKG_TYPE="apt";    DNAME="Trisquel"       ; break ;;
+            4)  DISTRO="pardus";      PKG_TYPE="apt";    DNAME="Pardus"         ; break ;;
+            5)  DISTRO="archlinux";   PKG_TYPE="pacman"; DNAME="Arch Linux"     ; break ;;
+            6)  DISTRO="artix";       PKG_TYPE="pacman"; DNAME="Artix Linux"    ; break ;;
+            7)  DISTRO="manjaro";     PKG_TYPE="pacman"; DNAME="Manjaro"        ; break ;;
+            8)  DISTRO="fedora";      PKG_TYPE="dnf";    DNAME="Fedora"         ; break ;;
+            9)  DISTRO="almalinux";   PKG_TYPE="dnf";    DNAME="AlmaLinux"      ; break ;;
+            10) DISTRO="oracle";      PKG_TYPE="dnf";    DNAME="Oracle Linux"   ; break ;;
+            11) DISTRO="rockylinux";  PKG_TYPE="dnf";    DNAME="Rocky Linux"    ; break ;;
+            12) DISTRO="alpine";      PKG_TYPE="apk";    DNAME="Alpine Linux"   ; break ;;
+            13) DISTRO="void";        PKG_TYPE="xbps";   DNAME="Void Linux"     ; break ;;
+            14) DISTRO="opensuse";    PKG_TYPE="zypper"; DNAME="OpenSUSE"       ; break ;;
+            15) DISTRO="chimera";     PKG_TYPE="apk";    DNAME="Chimera Linux"  ; break ;;
+            16) DISTRO="adelie";      PKG_TYPE="apk";    DNAME="Adelie Linux"   ; break ;;
+            17) DISTRO="deepin";      PKG_TYPE="apt";    DNAME="Deepin"         ; break ;;
+            *)  echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+        esac
+    done
 
     if [ "$PKG_TYPE" != "pkg" ]; then
         echo -e "${Y}--- [2/6] Installing $DNAME via proot-distro ---${NC}"
@@ -556,18 +584,19 @@ elif [ "$SETUP_TYPE" = "1" ]; then
     echo    "║   7)  Void Linux                            ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select a distro (1-7): " cd_choice
-
-    case $cd_choice in
-        1) DISTRO="debian";       PKG_TYPE="apt";    DNAME="Debian"       ;;
-        2) DISTRO="ubuntu:25.10"; PKG_TYPE="apt";    DNAME="Ubuntu"       ;;
-        3) DISTRO="archlinux";    PKG_TYPE="pacman"; DNAME="Arch Linux"   ;;
-        4) DISTRO="fedora";       PKG_TYPE="dnf";    DNAME="Fedora"       ;;
-        5) DISTRO="alpine";       PKG_TYPE="apk";    DNAME="Alpine Linux" ;;
-        6) DISTRO="opensuse";     PKG_TYPE="zypper"; DNAME="OpenSUSE"     ;;
-        7) DISTRO="void";         PKG_TYPE="xbps";   DNAME="Void Linux"   ;;
-        *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
-    esac
+    while true; do
+        read -p "Select a distro (1-7): " cd_choice
+        case $cd_choice in
+            1) DISTRO="debian";       PKG_TYPE="apt";    DNAME="Debian"       ; break ;;
+            2) DISTRO="ubuntu:25.10"; PKG_TYPE="apt";    DNAME="Ubuntu"       ; break ;;
+            3) DISTRO="archlinux";    PKG_TYPE="pacman"; DNAME="Arch Linux"   ; break ;;
+            4) DISTRO="fedora";       PKG_TYPE="dnf";    DNAME="Fedora"       ; break ;;
+            5) DISTRO="alpine";       PKG_TYPE="apk";    DNAME="Alpine Linux" ; break ;;
+            6) DISTRO="opensuse";     PKG_TYPE="zypper"; DNAME="OpenSUSE"     ; break ;;
+            7) DISTRO="void";         PKG_TYPE="xbps";   DNAME="Void Linux"   ; break ;;
+            *) echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+        esac
+    done
 
     # Login name used by chroot-distro (strips the :tag part, e.g. ubuntu:25.10 -> ubuntu)
     DISTRO_LOGIN="${DISTRO%%:*}"
@@ -617,14 +646,19 @@ if [ "$PKG_TYPE" = "pkg" ]; then
     echo    "║   4) Openbox  (Minimal, configurable)       ║"
     echo    "║                                              ║"
     echo    "║   ⚠ MATE unavailable on Native Termux       ║"
+    echo    "║   ⚠ KDE/GNOME unavailable on Native Termux  ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select a desktop (1-4): " de_raw
-    case $de_raw in
-        1) de_choice=1 ;; 2) de_choice=2 ;;
-        3) de_choice=4 ;; 4) de_choice=5 ;;
-        *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
-    esac
+    while true; do
+        read -p "Select a desktop (1-4): " de_raw
+        case $de_raw in
+            1) de_choice=1; break ;;
+            2) de_choice=2; break ;;
+            3) de_choice=4; break ;;
+            4) de_choice=5; break ;;
+            *) echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+        esac
+    done
 else
     echo -e "${C}╔══════════════════════════════════════════════╗"
     echo    "║       SELECT DESKTOP ENVIRONMENT / WM        ║"
@@ -634,13 +668,21 @@ else
     echo    "║   1) XFCE4    (Balanced - Recommended)      ║"
     echo    "║   2) LXQt     (Very lightweight, fast)      ║"
     echo    "║   3) MATE     (Classic GNOME 2 style)       ║"
+    echo    "║   6) KDE Plasma (Heavier, feature-rich)     ║"
+    echo    "║   7) GNOME    (Heaviest, needs more RAM)    ║"
     echo    "║                                              ║"
     echo    "║   --- Lightweight Window Managers ---        ║"
     echo    "║   4) Fluxbox  (Minimal, fastest, stable)    ║"
     echo    "║   5) Openbox  (Minimal, configurable)       ║"
     echo    "║                                              ║"
     echo -e "╚══════════════════════════════════════════════╝${NC}"
-    read -p "Select a desktop (1-5): " de_choice
+    while true; do
+        read -p "Select a desktop (1-7): " de_choice
+        case $de_choice in
+            1|2|3|4|5|6|7) break ;;
+            *) echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+        esac
+    done
 fi
 
 # ==============================================================
@@ -694,6 +736,12 @@ case $PKG_TYPE in
             5) DE_PKGS="openbox openbox-menu tint2 x11-xserver-utils"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
+            6) DE_PKGS="kde-plasma-desktop dolphin konsole dbus-x11"
+               DE_START="dbus-launch --exit-with-session startplasma-x11"
+               DE_NAME="KDE Plasma" ;;
+            7) DE_PKGS="gnome-core gnome-terminal dbus-x11"
+               DE_START="dbus-launch --exit-with-session gnome-session"
+               DE_NAME="GNOME" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
@@ -720,6 +768,12 @@ case $PKG_TYPE in
             5) DE_PKGS="openbox tint2 xorg-xsetroot"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
+            6) DE_PKGS="plasma-desktop konsole dolphin plasma-nm powerdevil kde-gtk-config dbus"
+               DE_START="dbus-launch --exit-with-session startplasma-x11"
+               DE_NAME="KDE Plasma" ;;
+            7) DE_PKGS="gnome-shell gnome-control-center gnome-terminal nautilus dbus"
+               DE_START="dbus-launch --exit-with-session gnome-session"
+               DE_NAME="GNOME" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache"
@@ -746,6 +800,12 @@ case $PKG_TYPE in
             5) DE_PKGS="openbox xfce4-panel xorg-x11-server-utils"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
+            6) DE_PKGS="@kde-desktop-environment dbus-x11"
+               DE_START="dbus-launch --exit-with-session startplasma-x11"
+               DE_NAME="KDE Plasma" ;;
+            7) DE_PKGS="@gnome-desktop dbus-x11"
+               DE_START="dbus-launch --exit-with-session gnome-session"
+               DE_NAME="GNOME" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
@@ -772,6 +832,12 @@ case $PKG_TYPE in
             5) DE_PKGS="openbox tint2 xsetroot"
                DE_START="openbox"
                DE_NAME="Openbox" ;;
+            6) DE_PKGS="plasma-desktop-meta kde-applications-base dbus-x11"
+               DE_START="dbus-launch --exit-with-session startplasma-x11"
+               DE_NAME="KDE Plasma" ;;
+            7) DE_PKGS="gnome gnome-apps-core dbus-x11"
+               DE_START="dbus-launch --exit-with-session gnome-session"
+               DE_NAME="GNOME" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
@@ -798,6 +864,12 @@ case $PKG_TYPE in
             5) DE_PKGS="openbox tint2 xsetroot"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
+            6) DE_PKGS="kde5 kde5-baseapps dbus-x11"
+               DE_START="dbus-launch --exit-with-session startplasma-x11"
+               DE_NAME="KDE Plasma" ;;
+            7) DE_PKGS="gnome dbus-x11"
+               DE_START="dbus-launch --exit-with-session gnome-session"
+               DE_NAME="GNOME" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
@@ -824,6 +896,12 @@ case $PKG_TYPE in
             5) DE_PKGS="openbox lxpanel xsetroot"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
+            6) DE_PKGS="pattern:kde_plasma dbus-1-x11"
+               DE_START="dbus-launch --exit-with-session startplasma-x11"
+               DE_NAME="KDE Plasma" ;;
+            7) DE_PKGS="pattern:gnome_basic pattern:gnome_x11 dbus-1-x11"
+               DE_START="dbus-launch --exit-with-session gnome-session"
+               DE_NAME="GNOME" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
