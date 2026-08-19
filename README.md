@@ -11,7 +11,7 @@ Pick a distro, pick a desktop environment, optionally install a set of matching 
 - **Zero-assumption bootstrap** — works on a completely fresh Termux install with no repos configured
 - **18 Linux distributions** via [proot-distro](https://github.com/termux/proot-distro), plus a **Native Termux** mode that skips proot entirely for maximum speed
 - **Experimental chroot-distro mode** — root-based alternative via [sabamdarif/chroot-distro](https://github.com/sabamdarif/chroot-distro), installed via `pip`, for better performance on rooted devices
-- **5 desktop environments / window managers**: XFCE4, LXQt, MATE, Fluxbox, Openbox
+- **7 desktop environments / window managers**: XFCE4, LXQt, MATE, Fluxbox, Openbox, Gnome, Kde
 - **Optional appearance pack**: Arc theme, Papirus icons, Noto emoji, clean fonts, Qt5ct, LXAppearance
 - **Built-in uninstaller** — scans every installed environment (Native, proot, chroot-distro), tells you which desktop environments it finds, and lets you remove just the DE or the whole system
 - **Verified package names** for every distro/package-manager combination — no guessed or deprecated package names
@@ -44,7 +44,7 @@ The script opens with a simple choice:
 ```
 0) Install a Linux desktop
 1) Uninstall a desktop or system
-```
+va bene ```
 
 ### Installing
 
@@ -140,7 +140,8 @@ Key points, each of which caused a real failure when missing:
 | **MATE** | Classic GNOME 2 style (not available on Native Termux) |
 | **Fluxbox** | Minimal, fastest window manager |
 | **Openbox** | Minimal and highly configurable, uses `tint2` as panel |
-
+|**Gnome**  | Classic full Gnome style, very heavy |
+|**Kde** | Feature-rich, highly customizable, heavy, based on x11 and not wayland |
 ---
 
 ## 🐛 Known Issues Fixed
