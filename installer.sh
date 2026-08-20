@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v5.5
+#  TERMUX-X11 FULL SETUP SCRIPT v5.0
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  ACTION 0 — Install a Linux desktop
@@ -686,6 +686,34 @@ else
 fi
 
 # ==============================================================
+# STEP 3b — Full vs Minimal (only for full DEs: XFCE4/LXQt/MATE/
+# KDE/GNOME). Fluxbox and Openbox are already minimal WMs, so
+# they skip this prompt entirely.
+# ==============================================================
+DE_VARIANT="full"
+case $de_choice in
+    1|2|3|6|7)
+        banner
+        echo -e "${C}╔══════════════════════════════════════════════╗"
+        echo    "║          FULL OR MINIMAL INSTALL?             ║"
+        echo    "╠══════════════════════════════════════════════╣"
+        echo    "║                                              ║"
+        echo    "║   1) Full     (all default apps/extras)     ║"
+        echo    "║   2) Minimal  (core session only, lighter)  ║"
+        echo    "║                                              ║"
+        echo -e "╚══════════════════════════════════════════════╝${NC}"
+        while true; do
+            read -p "Select an option (1-2): " variant_choice
+            case $variant_choice in
+                1) DE_VARIANT="full";    break ;;
+                2) DE_VARIANT="minimal"; break ;;
+                *) echo -e "${R}Invalid choice. Please try again.${NC}" ;;
+            esac
+        done
+        ;;
+esac
+
+# ==============================================================
 # Package definitions per package manager + DE
 # KEY FIXES:
 #  - librsvg* everywhere (SVG icon crash / Wnck signal 6)
@@ -699,12 +727,22 @@ case $PKG_TYPE in
     pkg) # Native Termux
         APPEAR_PKGS="arc-theme-gnome papirus-icon-theme noto-fonts-emoji ttf-dejavu qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="xfce4 dbus"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="xfce4 xfce4-goodies dbus"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="lxqt-session lxqt-panel pcmanfm-qt qterminal"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="lxqt"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
@@ -721,27 +759,52 @@ case $PKG_TYPE in
         EXTRA="dbus-x11 xauth fonts-noto librsvg2-common adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme fonts-noto-color-emoji ttf-dejavu-extra qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-desktop-environment dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="xfce4 dbus-x11"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="xfce4 xfce4-goodies dbus-x11"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="lxqt-core"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="lxqt"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
+            3) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="mate-desktop-environment-core dbus-x11"
+                   DE_NAME="MATE (Minimal)"
+               else
+                   DE_PKGS="mate-desktop-environment dbus-x11"
+                   DE_NAME="MATE (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session mate-session" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox openbox-menu tint2 x11-xserver-utils"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
-            6) DE_PKGS="kde-plasma-desktop dolphin konsole dbus-x11"
-               DE_START="dbus-launch --exit-with-session startplasma-x11"
-               DE_NAME="KDE Plasma" ;;
-            7) DE_PKGS="gnome-core gnome-terminal dbus-x11"
-               DE_START="dbus-launch --exit-with-session gnome-session"
-               DE_NAME="GNOME" ;;
+            6) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="plasma-desktop dolphin konsole dbus-x11"
+                   DE_NAME="KDE Plasma (Minimal)"
+               else
+                   DE_PKGS="kde-plasma-desktop dolphin konsole dbus-x11"
+                   DE_NAME="KDE Plasma (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session startplasma-x11" ;;
+            7) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="gnome-session gnome-shell gnome-terminal dbus-x11"
+                   DE_NAME="GNOME (Minimal)"
+               else
+                   DE_PKGS="gnome-core gnome-terminal dbus-x11"
+                   DE_NAME="GNOME (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session gnome-session" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apt install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
@@ -753,27 +816,52 @@ case $PKG_TYPE in
         EXTRA="dbus xorg-xauth noto-fonts librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-gtk-theme papirus-icon-theme noto-fonts-emoji ttf-ubuntu-font-family qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate mate-extra dbus"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="xfce4 dbus"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="xfce4 xfce4-goodies dbus"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="lxqt-session lxqt-panel pcmanfm-qt qterminal dbus"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="lxqt"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
+            3) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="mate dbus"
+                   DE_NAME="MATE (Minimal)"
+               else
+                   DE_PKGS="mate mate-extra dbus"
+                   DE_NAME="MATE (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session mate-session" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox tint2 xorg-xsetroot"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
-            6) DE_PKGS="plasma-desktop konsole dolphin plasma-nm powerdevil kde-gtk-config dbus"
-               DE_START="dbus-launch --exit-with-session startplasma-x11"
-               DE_NAME="KDE Plasma" ;;
-            7) DE_PKGS="gnome-shell gnome-control-center gnome-terminal nautilus dbus"
-               DE_START="dbus-launch --exit-with-session gnome-session"
-               DE_NAME="GNOME" ;;
+            6) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="plasma-desktop konsole dolphin dbus"
+                   DE_NAME="KDE Plasma (Minimal)"
+               else
+                   DE_PKGS="plasma-desktop konsole dolphin plasma-nm powerdevil kde-gtk-config dbus"
+                   DE_NAME="KDE Plasma (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session startplasma-x11" ;;
+            7) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="gnome-shell gnome-terminal nautilus dbus"
+                   DE_NAME="GNOME (Minimal)"
+               else
+                   DE_PKGS="gnome-shell gnome-control-center gnome-terminal nautilus dbus"
+                   DE_NAME="GNOME (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session gnome-session" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && pacman -S --noconfirm $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache"
@@ -785,27 +873,52 @@ case $PKG_TYPE in
         EXTRA="dbus-x11 xauth google-noto-fonts-common librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme google-noto-color-emoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="@xfce-desktop dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="@lxqt-desktop"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-session-manager marco mate-panel mate-desktop caja dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="@xfce-desktop dbus-x11"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="@xfce-desktop-environment dbus-x11"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="@lxqt-desktop dbus-x11"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="@lxqt-desktop-environment dbus-x11"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
+            3) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="@mate-desktop dbus-x11"
+                   DE_NAME="MATE (Minimal)"
+               else
+                   DE_PKGS="@mate-desktop-environment dbus-x11"
+                   DE_NAME="MATE (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session mate-session" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox xfce4-panel xorg-x11-server-utils"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
-            6) DE_PKGS="@kde-desktop-environment dbus-x11"
-               DE_START="dbus-launch --exit-with-session startplasma-x11"
-               DE_NAME="KDE Plasma" ;;
-            7) DE_PKGS="@gnome-desktop dbus-x11"
-               DE_START="dbus-launch --exit-with-session gnome-session"
-               DE_NAME="GNOME" ;;
+            6) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="@kde-desktop dbus-x11"
+                   DE_NAME="KDE Plasma (Minimal)"
+               else
+                   DE_PKGS="@kde-desktop-environment dbus-x11"
+                   DE_NAME="KDE Plasma (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session startplasma-x11" ;;
+            7) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="@gnome-desktop dbus-x11"
+                   DE_NAME="GNOME (Minimal)"
+               else
+                   DE_PKGS="@gnome-desktop-environment dbus-x11"
+                   DE_NAME="GNOME (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session gnome-session" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && dnf install -y $DE_PKGS $EXTRA && (gdk-pixbuf-query-loaders-64 --update-cache 2>/dev/null || gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true)"
@@ -817,27 +930,52 @@ case $PKG_TYPE in
         EXTRA="dbus-x11 xauth font-noto librsvg adwaita-icon-theme"
         APPEAR_PKGS="papirus-icon-theme font-noto font-dejavu qt5ct"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-extras dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt lxqt-session"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="marco mate-panel mate-session-manager caja dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="xfce4 dbus-x11"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="xfce4 xfce4-extras dbus-x11"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="lxqt-session lxqt-panel pcmanfm-qt qterminal"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="lxqt lxqt-session"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
+            3) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="marco mate-panel mate-session-manager dbus-x11"
+                   DE_NAME="MATE (Minimal)"
+               else
+                   DE_PKGS="marco mate-panel mate-session-manager caja dbus-x11"
+                   DE_NAME="MATE (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session mate-session" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox tint2 xsetroot"
                DE_START="openbox"
                DE_NAME="Openbox" ;;
-            6) DE_PKGS="plasma-desktop-meta kde-applications-base dbus-x11"
-               DE_START="dbus-launch --exit-with-session startplasma-x11"
-               DE_NAME="KDE Plasma" ;;
-            7) DE_PKGS="gnome gnome-apps-core dbus-x11"
-               DE_START="dbus-launch --exit-with-session gnome-session"
-               DE_NAME="GNOME" ;;
+            6) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="plasma-desktop dbus-x11"
+                   DE_NAME="KDE Plasma (Minimal)"
+               else
+                   DE_PKGS="plasma-desktop-meta kde-applications-base dbus-x11"
+                   DE_NAME="KDE Plasma (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session startplasma-x11" ;;
+            7) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="gnome-shell dbus-x11"
+                   DE_NAME="GNOME (Minimal)"
+               else
+                   DE_PKGS="gnome gnome-apps-core dbus-x11"
+                   DE_NAME="GNOME (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session gnome-session" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && apk add $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
@@ -849,27 +987,52 @@ case $PKG_TYPE in
         EXTRA="dbus-x11 xauth noto-fonts-ttf librsvg adwaita-icon-theme"
         APPEAR_PKGS="arc-theme papirus-icon-theme noto-fonts-emoji font-ubuntu-ttf qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate mate-extra dbus-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="xfce4 dbus-x11"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="xfce4 xfce4-goodies dbus-x11"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="lxqt-session lxqt-panel pcmanfm-qt qterminal"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="lxqt"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
+            3) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="mate dbus-x11"
+                   DE_NAME="MATE (Minimal)"
+               else
+                   DE_PKGS="mate mate-extra dbus-x11"
+                   DE_NAME="MATE (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session mate-session" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox tint2 xsetroot"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
-            6) DE_PKGS="kde5 kde5-baseapps dbus-x11"
-               DE_START="dbus-launch --exit-with-session startplasma-x11"
-               DE_NAME="KDE Plasma" ;;
-            7) DE_PKGS="gnome dbus-x11"
-               DE_START="dbus-launch --exit-with-session gnome-session"
-               DE_NAME="GNOME" ;;
+            6) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="kde5 dolphin konsole dbus-x11"
+                   DE_NAME="KDE Plasma (Minimal)"
+               else
+                   DE_PKGS="kde5 kde5-baseapps dbus-x11"
+                   DE_NAME="KDE Plasma (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session startplasma-x11" ;;
+            7) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="gnome-core dbus-x11"
+                   DE_NAME="GNOME (Minimal)"
+               else
+                   DE_PKGS="gnome dbus-x11"
+                   DE_NAME="GNOME (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session gnome-session" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && xbps-install -y $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
@@ -881,27 +1044,54 @@ case $PKG_TYPE in
         EXTRA="dbus-1-x11 xauth google-noto-fonts librsvg2 adwaita-icon-theme"
         APPEAR_PKGS="metatheme-arc-common papirus-icon-theme google-noto-coloremoji-fonts google-noto-sans-fonts qt5ct lxappearance"
         case $de_choice in
-            1) DE_PKGS="xfce4 xfce4-goodies dbus-1-x11"
-               DE_START="dbus-launch --exit-with-session xfce4-session"
-               DE_NAME="XFCE4"   ;;
-            2) DE_PKGS="lxqt"
-               DE_START="startlxqt"
-               DE_NAME="LXQt"    ;;
-            3) DE_PKGS="mate-session-manager marco mate-panel caja dbus-1-x11"
-               DE_START="dbus-launch --exit-with-session mate-session"
-               DE_NAME="MATE"    ;;
+            1) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="xfce4 dbus-1-x11"
+                   DE_NAME="XFCE4 (Minimal)"
+               else
+                   DE_PKGS="xfce4 xfce4-goodies dbus-1-x11"
+                   DE_NAME="XFCE4 (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session xfce4-session" ;;
+            2) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="lxqt-session lxqt-panel pcmanfm-qt qterminal"
+                   DE_NAME="LXQt (Minimal)"
+               else
+                   DE_PKGS="lxqt"
+                   DE_NAME="LXQt (Full)"
+               fi
+               DE_START="startlxqt" ;;
+            3) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="mate-session-manager marco mate-panel dbus-1-x11"
+                   DE_NAME="MATE (Minimal)"
+               else
+                   DE_PKGS="mate-session-manager marco mate-panel caja dbus-1-x11"
+                   DE_NAME="MATE (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session mate-session" ;;
             4) DE_PKGS="fluxbox"
                DE_START="fluxbox"
                DE_NAME="Fluxbox" ;;
             5) DE_PKGS="openbox lxpanel xsetroot"
                DE_START="openbox-session"
                DE_NAME="Openbox" ;;
-            6) DE_PKGS="pattern:kde_plasma dbus-1-x11"
-               DE_START="dbus-launch --exit-with-session startplasma-x11"
-               DE_NAME="KDE Plasma" ;;
-            7) DE_PKGS="pattern:gnome_basic pattern:gnome_x11 dbus-1-x11"
-               DE_START="dbus-launch --exit-with-session gnome-session"
-               DE_NAME="GNOME" ;;
+            6) # No distinct minimal KDE pattern verified for openSUSE;
+               # pattern:kde_plasma already resolves the correct
+               # Plasma version (5/6) for both variants.
+               DE_PKGS="pattern:kde_plasma dbus-1-x11"
+               if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_NAME="KDE Plasma (Minimal)"
+               else
+                   DE_NAME="KDE Plasma (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session startplasma-x11" ;;
+            7) if [ "$DE_VARIANT" = "minimal" ]; then
+                   DE_PKGS="pattern:gnome_basic pattern:gnome_x11 dbus-1-x11"
+                   DE_NAME="GNOME (Minimal)"
+               else
+                   DE_PKGS="pattern:gnome pattern:gnome_x11 dbus-1-x11"
+                   DE_NAME="GNOME (Full)"
+               fi
+               DE_START="dbus-launch --exit-with-session gnome-session" ;;
             *) echo -e "${R}Invalid choice.${NC}"; exit 1 ;;
         esac
         INSTALL_CMD="$UPD && zypper --non-interactive install $DE_PKGS $EXTRA && gdk-pixbuf-query-loaders --update-cache 2>/dev/null || true"
