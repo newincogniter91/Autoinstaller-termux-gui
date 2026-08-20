@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==============================================================
-#  TERMUX-X11 FULL SETUP SCRIPT v5.0
+#  TERMUX-X11 FULL SETUP SCRIPPt
 #  Fresh Termux install safe — no repos needed beforehand
 #
 #  ACTION 0 — Install a Linux desktop
