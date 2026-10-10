@@ -44,7 +44,7 @@ The script opens with a simple choice:
 ```
 0) Install a Linux desktop
 1) Uninstall a desktop or system
-va bene ```
+```
 
 ### Installing
 
